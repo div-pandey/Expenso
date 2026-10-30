@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-page: #FAF9F6;
+    --brand-forest: #12543F;
+  }
+
+  body {
+    background-color: #FAF9F6;
+    color: #1A1D20;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #DED8CB;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C7BEAB;
+}
+
+/* Smooth modal/drawer animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0.9;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.15s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pop-in {
+  animation: popIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Button Motion Graphics & Tactile Interactions */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes bellWobble {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-14deg); }
+  40% { transform: rotate(12deg); }
+  60% { transform: rotate(-8deg); }
+  80% { transform: rotate(5deg); }
+}
+
+@keyframes floatGentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.18) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.8s infinite;
+}
+
+.animate-bell {
+  animation: bellWobble 0.8s ease-in-out;
+}
+
+/* Tactile Button Classes */
+.btn-action-primary {
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow;
+}
+.btn-action-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(18, 84, 63, 0.28), 0 3px 6px -2px rgba(18, 84, 63, 0.16);
+}
+.btn-action-primary:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 2px 4px -1px rgba(18, 84, 63, 0.2);
+  transition-duration: 0.08s;
+}
+
+.btn-action-emerald {
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow;
+}
+.btn-action-emerald:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px -4px rgba(5, 150, 105, 0.32), 0 2px 5px -1px rgba(5, 150, 105, 0.18);
+}
+.btn-action-emerald:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 2px 4px -1px rgba(5, 150, 105, 0.2);
+  transition-duration: 0.08s;
+}
+
+.btn-action-secondary {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow, background-color;
+}
+.btn-action-secondary:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.07);
+}
+.btn-action-secondary:active {
+  transform: translateY(0.5px) scale(0.97);
+  transition-duration: 0.08s;
+}
+
+/* Hide scrollbar while keeping scroll functionality */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE / Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
