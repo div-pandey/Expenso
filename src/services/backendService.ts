@@ -1,5 +1,7 @@
 import { isSupabaseConfigured, supabase } from './supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { sandboxBackend } from './sandboxBackend';
+import { normalizeInviteCode } from '../utils/inviteCodes';
 import type {
   UserProfile,
   Blend,
@@ -11,9 +13,142 @@ import type {
   InAppNotification,
 } from '../types';
 
+// ─── Realtime & Cross-Tab Sync Infrastructure ───────────────────────────────
+
+type SyncListener = (event: { type: string; payload?: unknown }) => void;
+const syncListeners = new Set<SyncListener>();
+
+export function onSync(listener: SyncListener): void {
+  syncListeners.add(listener);
+}
+
+export function offSync(listener: SyncListener): void {
+  syncListeners.delete(listener);
+}
+
+function notifySyncListeners(event: { type: string; payload?: unknown }): void {
+  syncListeners.forEach(fn => {
+    try {
+      fn(event);
+    } catch (e) {
+      console.warn('Sync listener error:', e);
+    }
+  });
+}
+
+// 1. Cross-Tab Channel for immediate same-browser synchronization
+const INTERNAL_BROADCAST_CHANNEL = 'expenso_tab_sync_v1';
+let internalChannel: BroadcastChannel | null = null;
+if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
+  try {
+    internalChannel = new BroadcastChannel(INTERNAL_BROADCAST_CHANNEL);
+    internalChannel.onmessage = (event) => {
+      const { type, payload } = event.data || {};
+      if (type === 'USER_SYNC' && payload?.user) {
+        sandboxBackend.addUser(payload.user);
+        notifySyncListeners({ type: 'USER_SYNC', payload });
+      } else if (type === 'BLEND_SYNC' && payload?.blend) {
+        sandboxBackend.addBlend(payload.blend, payload.members);
+        notifySyncListeners({ type: 'BLEND_SYNC', payload });
+      } else if (type === 'RELOAD_DATA') {
+        notifySyncListeners({ type: 'RELOAD_DATA', payload });
+      }
+    };
+  } catch (e) {
+    console.warn('BroadcastChannel initialization note:', e);
+  }
+}
+
+// 2. Global Realtime Channel for cross-browser, incognito, and cross-device sync
+const GLOBAL_REALTIME_CHANNEL = 'expenso_global_sync';
+let realtimeChannel: RealtimeChannel | null = null;
+
+if (isSupabaseConfigured && supabase) {
+  try {
+    realtimeChannel = supabase.channel(GLOBAL_REALTIME_CHANNEL);
+    realtimeChannel
+      .on('broadcast', { event: 'USER_SYNC' }, ({ payload }) => {
+        if (payload?.user) {
+          sandboxBackend.addUser(payload.user);
+          notifySyncListeners({ type: 'USER_SYNC', payload });
+        }
+      })
+      .on('broadcast', { event: 'BLEND_SYNC' }, ({ payload }) => {
+        if (payload?.blend) {
+          sandboxBackend.addBlend(payload.blend, payload.members);
+          notifySyncListeners({ type: 'BLEND_SYNC', payload });
+        }
+      })
+      .on('broadcast', { event: 'RELOAD_DATA' }, ({ payload }) => {
+        notifySyncListeners({ type: 'RELOAD_DATA', payload });
+      })
+      .on('broadcast', { event: 'QUERY_INVITE_CODE' }, ({ payload }) => {
+        if (payload?.code) {
+          const user = sandboxBackend.findUserByInviteCode(payload.code);
+          const blend = sandboxBackend.findBlendByCode(payload.code);
+          if (user || blend) {
+            realtimeChannel?.send({
+              type: 'broadcast',
+              event: 'CODE_RESPONSE',
+              payload: { code: payload.code, user, blend },
+            });
+          }
+        }
+      })
+      .subscribe();
+  } catch (e) {
+    console.warn('Realtime channel initialization note:', e);
+  }
+}
+
+// Helper to ask active peers if they own a specific code
+async function queryPeerCode(code: string): Promise<{ user?: UserProfile; blend?: Blend } | null> {
+  if (!realtimeChannel) return null;
+  return new Promise((resolve) => {
+    let resolved = false;
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        resolve(null);
+      }
+    }, 450);
+
+    const onResponse = ({ payload }: { payload?: { code: string; user?: UserProfile; blend?: Blend } }) => {
+      if (payload?.code === code && !resolved) {
+        resolved = true;
+        clearTimeout(timeout);
+        resolve({ user: payload.user, blend: payload.blend });
+      }
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (realtimeChannel as any)?.on('broadcast', { event: 'CODE_RESPONSE' }, onResponse);
+
+    realtimeChannel?.send({
+      type: 'broadcast',
+      event: 'QUERY_INVITE_CODE',
+      payload: { code },
+    }).catch(() => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timeout);
+        resolve(null);
+      }
+    });
+  });
+}
+
 export const backendService = {
   isCloudConfigured(): boolean {
     return isSupabaseConfigured;
+  },
+
+  onSync(listener: SyncListener): void {
+    onSync(listener);
+  },
+
+  offSync(listener: SyncListener): void {
+    offSync(listener);
   },
 
   async hasCloudAuthSession(): Promise<boolean> {
@@ -66,27 +201,57 @@ export const backendService = {
   },
 
   async registerUser(fullName: string, email: string): Promise<UserProfile> {
-    // 1. Create the user in the reliable local sandbox backend immediately
+    // 1. Create the user in reliable local sandbox backend immediately
     const localUser = sandboxBackend.registerUser(fullName, email);
 
-    // 2. If Supabase cloud is configured, register in Supabase without throwing if confirmation email is pending
-    if (isSupabaseConfigured && supabase) {
+    // 2. Broadcast immediately to other tabs in this browser
+    if (internalChannel) {
       try {
-        await supabase.auth.signUp({
-          email: email.trim().toLowerCase(),
-          password: 'TemporaryPassword123!',
-          options: { data: { full_name: fullName.trim() } }
+        internalChannel.postMessage({
+          type: 'USER_SYNC',
+          payload: { user: localUser },
         });
-      } catch (err) {
-        console.warn('Supabase auth signup background notice:', err);
-      }
+      } catch {}
+    }
+
+    // 3. Broadcast to Supabase Realtime channel across devices/incognito
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({
+          type: 'broadcast',
+          event: 'USER_SYNC',
+          payload: { user: localUser },
+        });
+      } catch {}
+    }
+
+    // 4. Background cloud sync to Supabase PostgreSQL profiles table
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('profiles')
+        .upsert({
+          id: localUser.id,
+          email: localUser.email,
+          full_name: localUser.fullName,
+          initials: localUser.initials,
+          avatar_color: localUser.avatarColor,
+          invite_code: localUser.inviteCode,
+          phone: localUser.phone || null,
+        }, { onConflict: 'invite_code' })
+        .then(({ error }) => {
+          if (error) {
+            console.warn('Supabase profile direct upsert note (run 01_allow_anon_sync.sql in Supabase SQL editor for cloud persistence):', error.message);
+          }
+        })
+        // PromiseLike from Supabase builder does not have .catch(); wrap in Promise
+        .then(undefined, () => {});
     }
 
     return localUser;
   },
 
   async findUserByInviteCode(code: string): Promise<UserProfile | null> {
-    const cleanCode = code.trim().toUpperCase();
+    const cleanCode = normalizeInviteCode(code);
     if (!cleanCode) return null;
 
     // 1. Check local sandbox first (instant and reliable for demo & registered users in session)
@@ -98,13 +263,20 @@ export const backendService = {
     // 2. Check Supabase cloud profiles if configured
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data, error } = await supabase
+        const queryPromise = supabase
           .from('profiles')
           .select('*')
           .eq('invite_code', cleanCode)
           .maybeSingle();
+
+        // 2-second timeout to prevent any hanging network requests
+        const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) =>
+          setTimeout(() => resolve({ data: null, error: new Error('Lookup timeout') }), 2000)
+        );
+
+        const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
         if (!error && data) {
-          return {
+          const cloudUser: UserProfile = {
             id: data.id,
             email: data.email,
             fullName: data.full_name,
@@ -114,11 +286,99 @@ export const backendService = {
             phone: data.phone,
             createdAt: data.created_at,
           };
+          // CRITICAL: Cache this discovered friend into sandboxBackend!
+          sandboxBackend.addUser(cloudUser);
+          return cloudUser;
         }
       } catch (err) {
         console.warn('Supabase findUserByInviteCode lookup fallback:', err);
       }
     }
+
+    // 3. Ask active peer sessions via Supabase Realtime broadcast
+    if (realtimeChannel) {
+      try {
+        const peerResult = await queryPeerCode(cleanCode);
+        if (peerResult?.user) {
+          sandboxBackend.addUser(peerResult.user);
+          return peerResult.user;
+        }
+      } catch {
+        // Peer lookup optional
+      }
+    }
+
+    return null;
+  },
+
+  async findBlendByCode(code: string): Promise<Blend | null> {
+    const cleanCode = normalizeInviteCode(code);
+    if (!cleanCode) return null;
+
+    // 1. Check local sandbox
+    const localBlend = sandboxBackend.findBlendByCode(cleanCode);
+    if (localBlend) return localBlend;
+
+    // 2. Check Supabase cloud blends
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const queryPromise = supabase
+          .from('blends')
+          .select('*, blend_members(*, profile:profiles(*))')
+          .eq('blend_code', cleanCode)
+          .maybeSingle();
+
+        const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) =>
+          setTimeout(() => resolve({ data: null, error: new Error('Lookup timeout') }), 2000)
+        );
+
+        const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+        if (!error && data) {
+          const cloudBlend: Blend = {
+            id: data.id,
+            name: data.name,
+            createdBy: data.created_by,
+            createdAt: data.created_at,
+            blendCode: data.blend_code || cleanCode,
+            memberCount: data.blend_members?.length || 1,
+          };
+          sandboxBackend.addBlend(cloudBlend);
+          return cloudBlend;
+        }
+      } catch (err) {
+        console.warn('Supabase findBlendByCode lookup error:', err);
+      }
+    }
+
+    // 3. Ask peers
+    if (realtimeChannel) {
+      try {
+        const peerResult = await queryPeerCode(cleanCode);
+        if (peerResult?.blend) {
+          sandboxBackend.addBlend(peerResult.blend);
+          return peerResult.blend;
+        }
+      } catch {}
+    }
+
+    return null;
+  },
+
+  async findCodeTarget(code: string): Promise<{
+    type: 'user' | 'blend';
+    user?: UserProfile;
+    blend?: Blend;
+  } | null> {
+    const cleanCode = normalizeInviteCode(code);
+    if (!cleanCode || cleanCode.length !== 6) return null;
+
+    // Check user first
+    const user = await this.findUserByInviteCode(cleanCode);
+    if (user) return { type: 'user', user };
+
+    // Check blend next
+    const blend = await this.findBlendByCode(cleanCode);
+    if (blend) return { type: 'blend', blend };
 
     return null;
   },
@@ -138,6 +398,7 @@ export const backendService = {
             createdBy: b.created_by,
             createdAt: b.created_at,
             memberCount: b.blend_members?.[0]?.count || 1,
+            blendCode: b.blend_code,
           }));
         }
       } catch (err) {
@@ -181,6 +442,12 @@ export const backendService = {
   },
 
   async createBlend(name: string, friendInviteCode?: string): Promise<Blend> {
+    const cleanFriendCode = friendInviteCode ? normalizeInviteCode(friendInviteCode) : undefined;
+    if (cleanFriendCode) {
+      // Ensure friend is loaded into cache
+      await this.findUserByInviteCode(cleanFriendCode);
+    }
+
     if (isSupabaseConfigured && supabase && (await this.hasCloudAuthSession())) {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -200,8 +467,8 @@ export const backendService = {
           });
 
           // If friend code provided, add friend
-          if (friendInviteCode) {
-            const friend = await this.findUserByInviteCode(friendInviteCode);
+          if (cleanFriendCode) {
+            const friend = await this.findUserByInviteCode(cleanFriendCode);
             if (friend && friend.id !== user.id) {
               await supabase.from('blend_members').insert({
                 blend_id: blend.id,
@@ -216,44 +483,82 @@ export const backendService = {
             name: blend.name,
             createdBy: blend.created_by,
             createdAt: blend.created_at,
+            blendCode: blend.blend_code,
           };
         }
       } catch (err) {
         console.warn('Supabase createBlend fallback to sandbox:', err);
       }
     }
-    return sandboxBackend.createBlend(name, friendInviteCode);
+
+    const newBlend = sandboxBackend.createBlend(name, cleanFriendCode);
+
+    // Broadcast new blend to other tabs and network
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({
+          type: 'BLEND_SYNC',
+          payload: { blend: newBlend },
+        });
+      } catch {}
+    }
+
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({
+          type: 'broadcast',
+          event: 'BLEND_SYNC',
+          payload: { blend: newBlend },
+        });
+      } catch {}
+    }
+
+    return newBlend;
   },
 
-  async joinBlendWithFriendCode(friendInviteCode: string, blendId?: string): Promise<{ blend: Blend; friend: UserProfile }> {
+  async joinBlendWithFriendCode(code: string, blendId?: string): Promise<{ blend: Blend; friend?: UserProfile }> {
+    const cleanCode = normalizeInviteCode(code);
+
+    // 1. Discover target code (friend or blend) across sandbox, cloud, and peers
+    const target = await this.findCodeTarget(cleanCode);
+    if (!target) {
+      throw new Error(`No user or Blend found with code "${cleanCode}". Check and try again.`);
+    }
+
+    // 2. Perform join
     if (isSupabaseConfigured && supabase && (await this.hasCloudAuthSession())) {
       try {
-        const friend = await this.findUserByInviteCode(friendInviteCode);
-        if (friend) {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            if (!blendId) {
-              // Find existing blend or create shared one
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          let targetBlendId = blendId;
+          let friendProfile = target.user;
+
+          if (target.type === 'blend' && target.blend) {
+            targetBlendId = target.blend.id;
+          } else if (target.type === 'user' && target.user) {
+            if (!targetBlendId) {
               const { data: blends } = await supabase
                 .from('blend_members')
                 .select('blend:blends(*)')
-                .eq('user_id', friend.id);
+                .eq('user_id', target.user.id);
               const firstBlend = blends?.[0]?.blend as unknown as { id: string } | undefined;
               if (firstBlend && firstBlend.id) {
-                blendId = firstBlend.id;
+                targetBlendId = firstBlend.id;
               } else {
-                const created = await this.createBlend(`${friend.fullName} & Friend Blend`);
-                blendId = created.id;
+                const created = await this.createBlend(`${target.user.fullName} & Friend Blend`);
+                targetBlendId = created.id;
               }
             }
+          }
 
+          if (targetBlendId) {
             await supabase.from('blend_members').upsert({
-              blend_id: blendId,
+              blend_id: targetBlendId,
               user_id: user.id,
               role: 'member',
             });
 
-            const { data: b } = await supabase.from('blends').select('*').eq('id', blendId).single();
+            const { data: b } = await supabase.from('blends').select('*').eq('id', targetBlendId).single();
             if (b) {
               return {
                 blend: {
@@ -261,8 +566,9 @@ export const backendService = {
                   name: b.name,
                   createdBy: b.created_by,
                   createdAt: b.created_at,
+                  blendCode: b.blend_code,
                 },
-                friend,
+                friend: friendProfile,
               };
             }
           }
@@ -271,7 +577,39 @@ export const backendService = {
         console.warn('Supabase joinBlend fallback to sandbox:', err);
       }
     }
-    return sandboxBackend.joinBlendWithFriendCode(friendInviteCode, blendId);
+
+    const result = sandboxBackend.joinBlendWithFriendCode(cleanCode, blendId);
+
+    // 3. Broadcast to tabs and network so other members automatically see the new member
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({
+          type: 'BLEND_SYNC',
+          payload: { blend: result.blend },
+        });
+        internalChannel.postMessage({
+          type: 'RELOAD_DATA',
+          payload: { blendId: result.blend.id },
+        });
+      } catch {}
+    }
+
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({
+          type: 'broadcast',
+          event: 'BLEND_SYNC',
+          payload: { blend: result.blend },
+        });
+        realtimeChannel.send({
+          type: 'broadcast',
+          event: 'RELOAD_DATA',
+          payload: { blendId: result.blend.id },
+        });
+      } catch {}
+    }
+
+    return result;
   },
 
   async updateBlendName(blendId: string, name: string): Promise<void> {

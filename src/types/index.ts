@@ -54,6 +54,7 @@ export interface Blend {
   createdBy: string; // User ID
   createdAt: string;
   memberCount?: number;
+  blendCode?: string; // 6-character unique alphanumeric blend code
 }
 
 export interface BlendMember {

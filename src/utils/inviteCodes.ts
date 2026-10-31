@@ -29,3 +29,7 @@ export function isValidInviteCodeFormat(code: string): boolean {
 export function normalizeInviteCode(code: string): string {
   return code.trim().toUpperCase();
 }
+
+export function generateBlendCode(): string {
+  return generateInviteCode();
+}

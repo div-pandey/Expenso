@@ -81,7 +81,7 @@ interface AppContextType {
   createBlend: (name: string, friendInviteCode?: string) => Promise<void>;
   joinBlendWithFriendCode: (friendInviteCode: string) => Promise<void>;
   updateBlendName: (name: string) => Promise<void>;
-  validateInviteCode: (code: string) => Promise<{ valid: boolean; name?: string; error?: string }>;
+  validateInviteCode: (code: string) => Promise<{ valid: boolean; name?: string; isBlend?: boolean; error?: string }>;
 
   // Financial actions
   addExpense: (data: {
@@ -331,6 +331,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [currentBlend?.id, reloadData]);
 
+  // Realtime & Cross-tab broadcast listener for instant sync
+  useEffect(() => {
+    const handleSync = () => {
+      reloadData(currentBlend?.id);
+    };
+    backendService.onSync(handleSync);
+    return () => {
+      backendService.offSync(handleSync);
+    };
+  }, [currentBlend?.id, reloadData]);
+
   // Derived Members list for views & calculations
   const members: Member[] = useMemo(() => {
     return blendMembers.map(bm => ({
@@ -416,28 +427,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [reloadData, showToast]);
 
-  const joinBlendWithFriendCode = useCallback(async (friendInviteCode: string) => {
+  const joinBlendWithFriendCode = useCallback(async (code: string) => {
     try {
-      const { blend, friend } = await backendService.joinBlendWithFriendCode(friendInviteCode);
+      const { blend, friend } = await backendService.joinBlendWithFriendCode(code);
       setIsBlendModalOpen(false);
-      showToast(`Connected with ${friend.fullName}! Joined "${blend.name}"`);
+      if (friend) {
+        showToast(`Connected with ${friend.fullName}! Joined "${blend.name}"`);
+      } else {
+        showToast(`Joined "${blend.name}" successfully!`);
+      }
       await reloadData(blend.id);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Invalid invitation code';
+      const msg = e instanceof Error ? e.message : 'Invalid code';
       showToast(msg, 'error');
       throw new Error(msg); // re-throw so BlendModal can show inline error
     }
   }, [reloadData, showToast]);
 
-  const validateInviteCode = useCallback(async (code: string): Promise<{ valid: boolean; name?: string; error?: string }> => {
+  const validateInviteCode = useCallback(async (code: string): Promise<{
+    valid: boolean;
+    name?: string;
+    isBlend?: boolean;
+    error?: string;
+  }> => {
     const clean = code.trim().toUpperCase();
     if (!clean || clean.length !== 6) return { valid: false, error: 'Code must be exactly 6 characters' };
     try {
-      const user = await backendService.findUserByInviteCode(clean);
-      if (!user) return { valid: false, error: `No user found with code "${clean}". Check the code and try again.` };
-      // Compare against the React state currentUser to avoid stale closure issues
-      if (user.id === currentUser.id) return { valid: false, error: "You cannot enter your own invitation code." };
-      return { valid: true, name: user.fullName };
+      const target = await backendService.findCodeTarget(clean);
+      if (!target) return { valid: false, error: `No user or Blend found with code "${clean}". Check the code and try again.` };
+      if (target.type === 'user' && target.user) {
+        // Compare against the React state currentUser to avoid self-connection
+        if (target.user.id === currentUser.id) return { valid: false, error: "You cannot enter your own invitation code." };
+        return { valid: true, name: target.user.fullName, isBlend: false };
+      } else if (target.type === 'blend' && target.blend) {
+        return { valid: true, name: target.blend.name, isBlend: true };
+      }
+      return { valid: false, error: `No user or Blend found with code "${clean}". Check the code and try again.` };
     } catch {
       return { valid: false, error: 'Could not validate code. Please try again.' };
     }

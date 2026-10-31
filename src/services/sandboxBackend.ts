@@ -96,6 +96,7 @@ const INITIAL_BLEND: Blend = {
   createdBy: 'user_you',
   createdAt: '2026-10-20T08:00:00.000Z',
   memberCount: 3,
+  blendCode: 'CREW99',
 };
 
 const INITIAL_MEMBERS = [
@@ -211,6 +212,13 @@ class SandboxBackendService {
             }
             if (!Array.isArray(parsed.blends) || parsed.blends.length === 0) {
               parsed.blends = [{ ...INITIAL_BLEND }];
+            } else {
+              // Ensure all blends have a 6-character blendCode
+              for (const b of parsed.blends) {
+                if (!b.blendCode) {
+                  b.blendCode = generateInviteCode();
+                }
+              }
             }
             if (!Array.isArray(parsed.blendMembers) || parsed.blendMembers.length === 0) {
               parsed.blendMembers = [...INITIAL_MEMBERS];
@@ -304,15 +312,44 @@ class SandboxBackendService {
     this.saveDB();
   }
 
+  // --- Tab-Scoped & Multi-Session Active User Management ---
+
+  public getActiveUserId(): string {
+    if (typeof window !== 'undefined' && typeof sessionStorage !== 'undefined') {
+      try {
+        const sessionUser = sessionStorage.getItem('expenso_tab_user_id');
+        if (sessionUser && this.db.users.some(u => u.id === sessionUser)) {
+          return sessionUser;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return this.db.currentUserId || this.db.users[0]?.id || 'user_you';
+  }
+
+  public setActiveUserId(userId: string): void {
+    this.db.currentUserId = userId;
+    if (typeof window !== 'undefined' && typeof sessionStorage !== 'undefined') {
+      try {
+        sessionStorage.setItem('expenso_tab_user_id', userId);
+      } catch {
+        // ignore
+      }
+    }
+    this.saveDB();
+  }
+
   // --- Auth & Profile Management ---
 
   public getCurrentUser(): UserProfile {
     this.syncFromStorage();
-    const user = this.db.users.find(u => u.id === this.db.currentUserId);
+    const activeId = this.getActiveUserId();
+    const user = this.db.users.find(u => u.id === activeId);
     if (!user) {
       // Fallback to first user
-      this.db.currentUserId = this.db.users[0]?.id || 'user_you';
-      this.saveDB();
+      const fallbackId = this.db.users[0]?.id || 'user_you';
+      this.setActiveUserId(fallbackId);
       return this.db.users[0];
     }
     return user;
@@ -327,8 +364,7 @@ class SandboxBackendService {
     this.syncFromStorage();
     const user = this.db.users.find(u => u.id === userId);
     if (!user) throw new Error('User not found');
-    this.db.currentUserId = user.id;
-    this.saveDB();
+    this.setActiveUserId(user.id);
     return user;
   }
 
@@ -339,16 +375,21 @@ class SandboxBackendService {
       if (fullName.trim()) {
         existing.fullName = fullName.trim();
       }
-      this.db.currentUserId = existing.id;
+      this.setActiveUserId(existing.id);
       // Ensure user has at least one starter Blend
       const existingBlends = this.getUserBlends(existing.id);
       if (existingBlends.length === 0) {
+        let blendCode = generateInviteCode();
+        while (this.db.blends.some(b => b.blendCode === blendCode)) {
+          blendCode = generateInviteCode();
+        }
         const starterBlend: Blend = {
           id: `blend_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           name: `${existing.fullName}'s Commute Blend`,
           createdBy: existing.id,
           createdAt: new Date().toISOString(),
           memberCount: 1,
+          blendCode,
         };
         this.db.blends.push(starterBlend);
         this.db.blendMembers.push({
@@ -397,15 +438,20 @@ class SandboxBackendService {
     };
 
     this.db.users.push(newUser);
-    this.db.currentUserId = newUser.id;
+    this.setActiveUserId(newUser.id);
 
-    // Create a starter Commute Blend for the newly registered user
+    // Create a starter Commute Blend for the newly registered user with unique 6-character Blend Code
+    let starterBlendCode = generateInviteCode();
+    while (this.db.blends.some(b => b.blendCode === starterBlendCode)) {
+      starterBlendCode = generateInviteCode();
+    }
     const starterBlend: Blend = {
       id: `blend_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       name: `${fullName.trim()}'s Commute Blend`,
       createdBy: newUser.id,
       createdAt: new Date().toISOString(),
       memberCount: 1,
+      blendCode: starterBlendCode,
     };
     this.db.blends.push(starterBlend);
     this.db.blendMembers.push({
@@ -425,9 +471,37 @@ class SandboxBackendService {
     if (!user) {
       throw new Error('No account found with this email. Please sign up.');
     }
-    this.db.currentUserId = user.id;
-    this.saveDB();
+    this.setActiveUserId(user.id);
     return user;
+  }
+
+  public addUser(user: UserProfile): void {
+    this.syncFromStorage();
+    const idx = this.db.users.findIndex(u => u.id === user.id || u.inviteCode === user.inviteCode);
+    if (idx >= 0) {
+      this.db.users[idx] = { ...this.db.users[idx], ...user };
+    } else {
+      this.db.users.push(user);
+    }
+    this.saveDB();
+  }
+
+  public addBlend(blend: Blend, members?: { blendId: string; userId: string; role: 'admin' | 'member'; joinedAt: string }[]): void {
+    this.syncFromStorage();
+    const idx = this.db.blends.findIndex(b => b.id === blend.id || (blend.blendCode && b.blendCode === blend.blendCode));
+    if (idx >= 0) {
+      this.db.blends[idx] = { ...this.db.blends[idx], ...blend };
+    } else {
+      this.db.blends.push(blend);
+    }
+    if (members && Array.isArray(members)) {
+      for (const m of members) {
+        if (!this.db.blendMembers.some(bm => bm.blendId === m.blendId && bm.userId === m.userId)) {
+          this.db.blendMembers.push(m);
+        }
+      }
+    }
+    this.saveDB();
   }
 
   public findUserByInviteCode(code: string): UserProfile | null {
@@ -438,6 +512,24 @@ class SandboxBackendService {
       user = this.db.users.find(u => u.inviteCode.trim().toUpperCase() === normalized);
     }
     return user || null;
+  }
+
+  public findBlendByCode(code: string): Blend | null {
+    const normalized = normalizeInviteCode(code);
+    this.syncFromStorage();
+    let blend = this.db.blends.find(b => b.blendCode === normalized || b.id === normalized);
+    if (!blend) {
+      blend = this.db.blends.find(b => b.blendCode?.trim().toUpperCase() === normalized);
+    }
+    return blend || null;
+  }
+
+  public findUserOrBlendByCode(code: string): { type: 'user'; user: UserProfile } | { type: 'blend'; blend: Blend } | null {
+    const user = this.findUserByInviteCode(code);
+    if (user) return { type: 'user', user };
+    const blend = this.findBlendByCode(code);
+    if (blend) return { type: 'blend', blend };
+    return null;
   }
 
   // --- Blend Management ---
@@ -477,12 +569,18 @@ class SandboxBackendService {
 
   public createBlend(name: string, friendInviteCode?: string): Blend {
     const currentUser = this.getCurrentUser();
+    let code = generateInviteCode();
+    while (this.db.blends.some(b => b.blendCode === code)) {
+      code = generateInviteCode();
+    }
+
     const newBlend: Blend = {
       id: `blend_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       name: name.trim(),
       createdBy: currentUser.id,
       createdAt: new Date().toISOString(),
       memberCount: 1,
+      blendCode: code,
     };
 
     this.db.blends.push(newBlend);
@@ -512,23 +610,45 @@ class SandboxBackendService {
     return newBlend;
   }
 
-  public joinBlendWithFriendCode(friendInviteCode: string, blendId?: string): { blend: Blend; friend: UserProfile } {
+  public joinBlendWithFriendCode(code: string, blendId?: string): { blend: Blend; friend?: UserProfile } {
+    const cleanCode = normalizeInviteCode(code);
     const currentUser = this.getCurrentUser();
-    const friend = this.findUserByInviteCode(friendInviteCode);
+
+    // 1. Check if direct Blend Code
+    const directBlend = this.findBlendByCode(cleanCode);
+    if (directBlend) {
+      const alreadyMember = this.db.blendMembers.some(
+        bm => bm.blendId === directBlend.id && bm.userId === currentUser.id
+      );
+      if (!alreadyMember) {
+        this.db.blendMembers.push({
+          blendId: directBlend.id,
+          userId: currentUser.id,
+          role: 'member',
+          joinedAt: new Date().toISOString(),
+        });
+      }
+      directBlend.memberCount = this.db.blendMembers.filter(bm => bm.blendId === directBlend.id).length;
+      this.saveDB();
+      const creator = this.db.users.find(u => u.id === directBlend.createdBy);
+      return { blend: directBlend, friend: creator };
+    }
+
+    // 2. Check if Friend's Personal Invite Code
+    const friend = this.findUserByInviteCode(cleanCode);
     if (!friend) {
-      throw new Error(`No user found with invitation code "${friendInviteCode.toUpperCase()}". Check and try again.`);
+      throw new Error(`No user or Blend found with code "${cleanCode}". Check and try again.`);
     }
 
     if (friend.id === currentUser.id) {
       throw new Error('You cannot enter your own invitation code.');
     }
 
-    // If specific blendId given:
+    // Find a blend that the friend belongs to
     let targetBlend: Blend | undefined;
     if (blendId) {
       targetBlend = this.db.blends.find(b => b.id === blendId);
     } else {
-      // Find a blend that the friend belongs to
       const friendBlendIds = this.db.blendMembers
         .filter(bm => bm.userId === friend.id)
         .map(bm => bm.blendId);
@@ -536,12 +656,17 @@ class SandboxBackendService {
 
       // If friend has no blend, create a new shared Blend together!
       if (!targetBlend) {
+        let newBlendCode = generateInviteCode();
+        while (this.db.blends.some(b => b.blendCode === newBlendCode)) {
+          newBlendCode = generateInviteCode();
+        }
         targetBlend = {
-          id: `blend_${Date.now()}`,
+          id: `blend_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           name: `${friend.fullName} & ${currentUser.fullName} Blend`,
           createdBy: currentUser.id,
           createdAt: new Date().toISOString(),
           memberCount: 2,
+          blendCode: newBlendCode,
         };
         this.db.blends.push(targetBlend);
         this.db.blendMembers.push({
@@ -567,6 +692,7 @@ class SandboxBackendService {
         joinedAt: new Date().toISOString(),
       });
     }
+    targetBlend.memberCount = this.db.blendMembers.filter(bm => bm.blendId === targetBlend!.id).length;
 
     this.saveDB();
     return { blend: targetBlend, friend };

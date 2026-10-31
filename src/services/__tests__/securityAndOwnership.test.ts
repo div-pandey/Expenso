@@ -54,7 +54,7 @@ describe('Security, Payer Ownership & Blend Isolation Engine', () => {
       sandboxBackend.switchActiveUser('user_you');
 
       const result = await backendService.joinBlendWithFriendCode(newUser.inviteCode);
-      expect(result.friend.fullName).toBe('Vikram Singh');
+      expect(result.friend?.fullName).toBe('Vikram Singh');
       expect(result.blend).toBeDefined();
       
       // Verify both members are in the blend

@@ -28,7 +28,8 @@ export const BlendModal: React.FC = () => {
   // Inline validation state for the friend code fields
   const [codeValidating, setCodeValidating] = useState(false);
   const [codeStatus, setCodeStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
-  const [codeValidName, setCodeValidName] = useState(''); // friend's name when valid
+  const [codeValidName, setCodeValidName] = useState(''); // friend's name or blend's name when valid
+  const [isBlendTarget, setIsBlendTarget] = useState(false);
 
   const copyMyCode = () => {
     navigator.clipboard.writeText(currentUser.inviteCode);
@@ -40,6 +41,7 @@ export const BlendModal: React.FC = () => {
   const resetCodeStatus = () => {
     setCodeStatus('idle');
     setCodeValidName('');
+    setIsBlendTarget(false);
     setError('');
   };
 
@@ -49,6 +51,7 @@ export const BlendModal: React.FC = () => {
     if (!clean) { resetCodeStatus(); return; }
     if (!isValidInviteCodeFormat(clean)) {
       setCodeStatus('invalid');
+      setIsBlendTarget(false);
       setError('Code must be exactly 6 alphanumeric characters.');
       return;
     }
@@ -60,9 +63,11 @@ export const BlendModal: React.FC = () => {
     if (result.valid) {
       setCodeStatus('valid');
       setCodeValidName(result.name || '');
+      setIsBlendTarget(Boolean(result.isBlend));
       setError('');
     } else {
       setCodeStatus('invalid');
+      setIsBlendTarget(false);
       setError(result.error || 'Invalid invitation code.');
     }
   }, [validateInviteCode]);
@@ -162,6 +167,7 @@ export const BlendModal: React.FC = () => {
     setFriendCodeInput('');
     setJoinCodeInput('');
     setBlendName('');
+    setIsBlendTarget(false);
   };
 
   if (!isBlendModalOpen) return null;
@@ -178,14 +184,14 @@ export const BlendModal: React.FC = () => {
     if (codeStatus === 'valid') {
       return (
         <span className="flex items-center gap-1 text-[11px] text-emerald-700 font-semibold mt-1">
-          <UserCheck className="w-3 h-3" /> Found: <strong>{codeValidName}</strong> — ready to connect!
+          <UserCheck className="w-3.5 h-3.5" /> Found {isBlendTarget ? 'Blend' : 'Friend'}: <strong>{codeValidName}</strong> — ready to connect!
         </span>
       );
     }
     if (codeStatus === 'invalid' && error) {
       return (
         <span className="flex items-center gap-1 text-[11px] text-rose-600 font-medium mt-1">
-          <AlertCircle className="w-3 h-3 shrink-0" /> {error}
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {error}
         </span>
       );
     }
@@ -399,12 +405,12 @@ export const BlendModal: React.FC = () => {
           <form onSubmit={handleJoinWithCode} className="p-5 space-y-3.5">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-600 mb-1">
-                Enter Friend's 6-Character Invitation Code <span className="text-rose-500">*</span>
+                Enter 6-Character Invite or Blend Code <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="e.g. AMAN72 or RAHUL9"
+                  placeholder="Friend code or Blend code"
                   maxLength={6}
                   value={joinCodeInput}
                   onChange={e => handleJoinCodeChange(e.target.value)}
@@ -429,7 +435,7 @@ export const BlendModal: React.FC = () => {
 
               {codeStatus === 'idle' && !codeValidating && (
                 <p className="text-[11px] text-charcoal-500 mt-1.5 leading-relaxed">
-                  Entering a friend's personal code connects you to their shared commute Blend.
+                  Enter a friend's personal code <strong>or</strong> a Blend code to instantly connect and join.
                 </p>
               )}
             </div>
