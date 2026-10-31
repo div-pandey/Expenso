@@ -132,8 +132,8 @@ interface AppContextType {
   isLoginOpen: boolean;
   openLogin: () => void;
   closeLogin: () => void;
-  login: (userId: string) => Promise<void>;
-  registerUser: (fullName: string, email: string) => Promise<UserProfile>;
+  login: (emailOrUserId: string, password?: string) => Promise<void>;
+  registerUser: (fullName: string, email: string, password?: string) => Promise<UserProfile>;
   logout: () => void;
 
   // In-App Notifications
@@ -616,12 +616,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return notifications.filter(n => !n.isRead).length;
   }, [notifications]);
 
-  const login = useCallback(async (identifier: string) => {
+  const login = useCallback(async (identifier: string, password?: string) => {
     try {
       let user: UserProfile;
       if (identifier.includes('@')) {
-        // Sign in via registered email
-        user = await backendService.loginUser(identifier);
+        // Sign in via registered email with password
+        user = await backendService.loginUser(identifier, password);
       } else {
         // Sign in via userId
         user = backendService.switchDemoUser(identifier);
@@ -646,9 +646,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [reloadData, showToast]);
 
-  const registerUser = useCallback(async (fullName: string, email: string): Promise<UserProfile> => {
+  const registerUser = useCallback(async (fullName: string, email: string, password?: string): Promise<UserProfile> => {
     try {
-      const user = await backendService.registerUser(fullName, email);
+      const user = await backendService.registerUser(fullName, email, password);
       setCurrentUser(user);
       setIsLoggedIn(true);
       try {

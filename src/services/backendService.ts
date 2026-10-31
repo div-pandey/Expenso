@@ -3,6 +3,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { sandboxBackend } from './sandboxBackend';
 import { normalizeInviteCode } from '../utils/inviteCodes';
 import { generateUUID } from '../utils/uuid';
+import { hashPassword } from '../utils/crypto';
 import type {
   UserProfile,
   Blend,
@@ -211,18 +212,24 @@ export const backendService = {
     return sandboxBackend.switchActiveUser(userId);
   },
 
-  async loginUser(email: string): Promise<UserProfile> {
+  async loginUser(email: string, password?: string): Promise<UserProfile> {
     const trimmedEmail = email.trim().toLowerCase();
     if (!trimmedEmail) {
       throw new Error('Please enter your email address.');
     }
 
+    const passwordHash = password ? await hashPassword(password) : undefined;
+
     // 1. Check local sandbox first
     try {
-      const localUser = sandboxBackend.loginUser(trimmedEmail);
+      const localUser = sandboxBackend.loginUser(trimmedEmail, passwordHash);
       return localUser;
-    } catch {
-      // Not found locally, proceed to cloud check
+    } catch (err: unknown) {
+      // If password was incorrect, rethrow immediately!
+      if (err instanceof Error && err.message.includes('Incorrect password')) {
+        throw err;
+      }
+      // If user not found locally, proceed to cloud check
     }
 
     // 2. Check Supabase profiles by email
@@ -235,6 +242,11 @@ export const backendService = {
           .maybeSingle();
 
         if (!error && data) {
+          // If stored hash exists and input hash doesn't match, reject!
+          if (data.password_hash && passwordHash && data.password_hash !== passwordHash) {
+            throw new Error('Incorrect password. Please try again.');
+          }
+
           const cloudUser: UserProfile = {
             id: data.id,
             email: data.email,
@@ -243,13 +255,17 @@ export const backendService = {
             avatarColor: data.avatar_color,
             inviteCode: data.invite_code,
             phone: data.phone,
+            passwordHash: data.password_hash || passwordHash,
             createdAt: data.created_at,
           };
           sandboxBackend.addUser(cloudUser);
           sandboxBackend.switchActiveUser(cloudUser.id);
           return cloudUser;
         }
-      } catch (err) {
+      } catch (err: unknown) {
+        if (err instanceof Error && err.message.includes('Incorrect password')) {
+          throw err;
+        }
         console.warn('Supabase loginUser lookup note:', err);
       }
     }
@@ -257,9 +273,11 @@ export const backendService = {
     throw new Error('No account found with this email. Please check your email or create a new account.');
   },
 
-  async registerUser(fullName: string, email: string): Promise<UserProfile> {
+  async registerUser(fullName: string, email: string, password?: string): Promise<UserProfile> {
+    const passwordHash = password ? await hashPassword(password) : undefined;
+
     // 1. Create the user in reliable local sandbox backend immediately
-    const localUser = sandboxBackend.registerUser(fullName, email);
+    const localUser = sandboxBackend.registerUser(fullName, email, passwordHash);
 
     // 2. Broadcast immediately to other tabs in this browser
     if (internalChannel) {
@@ -286,19 +304,28 @@ export const backendService = {
     if (isSupabaseConfigured && supabase) {
       const client = supabase;
       try {
+        const profilePayload: Record<string, unknown> = {
+          id: localUser.id,
+          email: localUser.email,
+          full_name: localUser.fullName,
+          initials: localUser.initials,
+          avatar_color: localUser.avatarColor,
+          invite_code: localUser.inviteCode,
+          phone: localUser.phone || null,
+        };
+        if (passwordHash) {
+          profilePayload.password_hash = passwordHash;
+        }
+
         client
           .from('profiles')
-          .upsert({
-            id: localUser.id,
-            email: localUser.email,
-            full_name: localUser.fullName,
-            initials: localUser.initials,
-            avatar_color: localUser.avatarColor,
-            invite_code: localUser.inviteCode,
-            phone: localUser.phone || null,
-          }, { onConflict: 'id' })
+          .upsert(profilePayload, { onConflict: 'id' })
           .then(async ({ error }) => {
-            if (error) {
+            // If column password_hash doesn't exist yet in Supabase, retry without it
+            if (error && (error.code === '42703' || error.message?.includes('password_hash'))) {
+              delete profilePayload.password_hash;
+              await client.from('profiles').upsert(profilePayload, { onConflict: 'id' }).then(undefined, () => {});
+            } else if (error) {
               console.warn('Supabase profile direct upsert note:', error.message);
               return;
             }

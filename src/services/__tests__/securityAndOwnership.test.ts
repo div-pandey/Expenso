@@ -70,6 +70,21 @@ describe('Security, Payer Ownership & Blend Isolation Engine', () => {
       expect(ownerNotifs.some(n => n.type === 'blend_invite' && n.message.includes('joined your blend'))).toBe(true);
     });
 
+    it('registers a user with password and authenticates securely on login', async () => {
+      const user = await backendService.registerUser('Kavya Nair', 'kavya@campus.edu', 'SecurePass123!');
+      expect(user.passwordHash).toBeDefined();
+
+      // Login with correct password should succeed
+      const loggedIn = await backendService.loginUser('kavya@campus.edu', 'SecurePass123!');
+      expect(loggedIn.id).toBe(user.id);
+      expect(loggedIn.email).toBe('kavya@campus.edu');
+
+      // Login with incorrect password should reject
+      await expect(
+        backendService.loginUser('kavya@campus.edu', 'WrongPassword!')
+      ).rejects.toThrow(/Incorrect password/);
+    });
+
     it('generates a unique 6-character blend code every time a new blend is created', async () => {
       sandboxBackend.switchActiveUser('user_you');
       const blend1 = await backendService.createBlend('Morning Metro Gang');

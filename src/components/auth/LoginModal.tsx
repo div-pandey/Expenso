@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { X, LogIn, Mail, Loader2, ArrowRight } from 'lucide-react';
+import { X, LogIn, Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 
 export const LoginModal: React.FC = () => {
   const { isLoginOpen, closeLogin, login, openOnboarding } = useApp();
   const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -18,10 +20,14 @@ export const LoginModal: React.FC = () => {
       setEmailError('Please enter your email address.');
       return;
     }
+    if (!passwordInput) {
+      setEmailError('Please enter your password.');
+      return;
+    }
 
     setIsLoading(true);
     try {
-      await login(trimmedEmail);
+      await login(trimmedEmail, passwordInput);
       // login() automatically closes modal and displays welcome toast on success
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'No account found with this email.';
@@ -76,8 +82,9 @@ export const LoginModal: React.FC = () => {
           </div>
 
           <div className="p-6 space-y-5 overflow-y-auto flex-1">
-            {/* Email Sign In Form */}
+            {/* Email & Password Sign In Form */}
             <form onSubmit={handleEmailSignIn} className="space-y-4" noValidate>
+              {/* Email Address */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-600 mb-1.5">
                   Email Address
@@ -96,7 +103,7 @@ export const LoginModal: React.FC = () => {
                     placeholder="you@example.com"
                     autoFocus
                     className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm bg-white text-charcoal-900 placeholder:text-charcoal-400 outline-none transition-all shadow-subtle ${
-                      emailError
+                      emailError && !emailInput.trim()
                         ? 'border-rose-400 ring-2 ring-rose-400/20 focus:border-rose-500'
                         : 'border-warm-300 focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20'
                     }`}
@@ -104,16 +111,54 @@ export const LoginModal: React.FC = () => {
                     autoComplete="email"
                   />
                 </div>
-                {emailError && (
-                  <p className="mt-2 text-xs font-medium text-rose-600 flex items-center gap-1.5 animate-fade-in">
-                    <span>{emailError}</span>
-                  </p>
-                )}
               </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-600 mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-400 pointer-events-none">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={passwordInput}
+                    onChange={(e) => {
+                      setPasswordInput(e.target.value);
+                      if (emailError) setEmailError('');
+                    }}
+                    placeholder="Enter your password"
+                    className={`w-full pl-10 pr-11 py-3 rounded-xl border text-sm bg-white text-charcoal-900 placeholder:text-charcoal-400 outline-none transition-all shadow-subtle ${
+                      emailError && emailInput.trim()
+                        ? 'border-rose-400 ring-2 ring-rose-400/20 focus:border-rose-500'
+                        : 'border-warm-300 focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20'
+                    }`}
+                    disabled={isLoading}
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-charcoal-400 hover:text-charcoal-700 transition-colors"
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {emailError && (
+                <p className="text-xs font-medium text-rose-600 flex items-center gap-1.5 animate-fade-in">
+                  <span>{emailError}</span>
+                </p>
+              )}
 
               <button
                 type="submit"
-                disabled={isLoading || !emailInput.trim()}
+                disabled={isLoading || !emailInput.trim() || !passwordInput}
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-brand-700 hover:bg-brand-800 text-white text-sm font-bold shadow-subtle transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99]"
               >
                 {isLoading ? (

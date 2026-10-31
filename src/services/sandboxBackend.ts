@@ -369,12 +369,15 @@ class SandboxBackendService {
     return user;
   }
 
-  public registerUser(fullName: string, email: string): UserProfile {
+  public registerUser(fullName: string, email: string, passwordHash?: string): UserProfile {
     const normalizedEmail = email.trim().toLowerCase();
     const existing = this.db.users.find(u => u.email === normalizedEmail);
     if (existing) {
       if (fullName.trim()) {
         existing.fullName = fullName.trim();
+      }
+      if (passwordHash) {
+        existing.passwordHash = passwordHash;
       }
       this.setActiveUserId(existing.id);
       // Ensure user has at least one starter Blend
@@ -434,6 +437,7 @@ class SandboxBackendService {
       initials,
       avatarColor,
       inviteCode: code,
+      passwordHash,
       createdAt: new Date().toISOString(),
       isOnboarded: false,
     };
@@ -466,11 +470,14 @@ class SandboxBackendService {
     return newUser;
   }
 
-  public loginUser(email: string): UserProfile {
+  public loginUser(email: string, passwordHash?: string): UserProfile {
     const normalizedEmail = email.trim().toLowerCase();
     const user = this.db.users.find(u => u.email === normalizedEmail);
     if (!user) {
-      throw new Error('No account found with this email. Please sign up.');
+      throw new Error('No account found with this email. Please check your email or create a new account.');
+    }
+    if (user.passwordHash && passwordHash && user.passwordHash !== passwordHash) {
+      throw new Error('Incorrect password. Please try again.');
     }
     this.setActiveUserId(user.id);
     return user;

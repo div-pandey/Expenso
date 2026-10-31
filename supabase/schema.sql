@@ -29,6 +29,7 @@ CREATE TABLE public.profiles (
   avatar_color TEXT NOT NULL DEFAULT 'bg-emerald-600 text-white',
   invite_code VARCHAR(6) NOT NULL UNIQUE,
   phone TEXT,
+  password_hash TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );

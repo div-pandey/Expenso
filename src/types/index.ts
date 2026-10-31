@@ -43,6 +43,7 @@ export interface UserProfile {
   avatarColor: string;
   inviteCode: string; // 6-character unique alphanumeric code
   phone?: string;
+  passwordHash?: string;
   paymentMethod?: UserPaymentMethod;
   isOnboarded?: boolean;
   createdAt: string;
