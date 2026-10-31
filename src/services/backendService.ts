@@ -211,6 +211,52 @@ export const backendService = {
     return sandboxBackend.switchActiveUser(userId);
   },
 
+  async loginUser(email: string): Promise<UserProfile> {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
+      throw new Error('Please enter your email address.');
+    }
+
+    // 1. Check local sandbox first
+    try {
+      const localUser = sandboxBackend.loginUser(trimmedEmail);
+      return localUser;
+    } catch {
+      // Not found locally, proceed to cloud check
+    }
+
+    // 2. Check Supabase profiles by email
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .ilike('email', trimmedEmail)
+          .maybeSingle();
+
+        if (!error && data) {
+          const cloudUser: UserProfile = {
+            id: data.id,
+            email: data.email,
+            fullName: data.full_name,
+            initials: data.initials,
+            avatarColor: data.avatar_color,
+            inviteCode: data.invite_code,
+            phone: data.phone,
+            createdAt: data.created_at,
+          };
+          sandboxBackend.addUser(cloudUser);
+          sandboxBackend.switchActiveUser(cloudUser.id);
+          return cloudUser;
+        }
+      } catch (err) {
+        console.warn('Supabase loginUser lookup note:', err);
+      }
+    }
+
+    throw new Error('No account found with this email. Please check your email or create a new account.');
+  },
+
   async registerUser(fullName: string, email: string): Promise<UserProfile> {
     // 1. Create the user in reliable local sandbox backend immediately
     const localUser = sandboxBackend.registerUser(fullName, email);

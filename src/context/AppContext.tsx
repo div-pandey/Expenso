@@ -616,9 +616,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return notifications.filter(n => !n.isRead).length;
   }, [notifications]);
 
-  const login = useCallback(async (userId: string) => {
+  const login = useCallback(async (identifier: string) => {
     try {
-      const user = backendService.switchDemoUser(userId);
+      let user: UserProfile;
+      if (identifier.includes('@')) {
+        // Sign in via registered email
+        user = await backendService.loginUser(identifier);
+      } else {
+        // Sign in via userId
+        user = backendService.switchDemoUser(identifier);
+      }
       setCurrentUser(user);
       setIsLoggedIn(true);
       try {
@@ -633,7 +640,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast(`Welcome back, ${user.fullName}!`);
       await reloadData();
     } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : 'Failed to sign in', 'error');
+      const msg = e instanceof Error ? e.message : 'Failed to sign in';
+      showToast(msg, 'error');
+      throw new Error(msg);
     }
   }, [reloadData, showToast]);
 
