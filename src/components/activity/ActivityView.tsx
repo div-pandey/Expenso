@@ -22,9 +22,9 @@ type ActivityEntry =
   | { type: 'settlement'; id: string; date: string; data: Settlement };
 
 export const ActivityView: React.FC = () => {
-  const { expenses, settlements, members, openAddExpense, openBlendModal, openRecordSettlement } = useApp();
+  const { expenses, settlements, members, currentBlend, openAddExpense, openBlendModal, openRecordSettlement } = useApp();
 
-  const hasBlendFriends = members.length >= 2;
+  const hasBlendFriends = (currentBlend?.memberCount ?? members.length) >= 2 || members.length >= 2;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activityType, setActivityType] = useState<'all' | 'rides' | 'repayments'>('all');

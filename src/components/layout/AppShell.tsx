@@ -40,7 +40,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
   const [copiedCode, setCopiedCode] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
-  const hasBlendFriends = members.length >= 2;
+  const hasBlendFriends = (currentBlend?.memberCount ?? members.length) >= 2 || members.length >= 2;
 
   const handleCopyCode = (e: React.MouseEvent) => {
     e.stopPropagation();

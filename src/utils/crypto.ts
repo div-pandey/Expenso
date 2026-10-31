@@ -27,3 +27,4 @@ export async function hashPassword(password: string): Promise<string> {
   }
   return `hash_${Math.abs(hash)}_${clean.length}`;
 }
+

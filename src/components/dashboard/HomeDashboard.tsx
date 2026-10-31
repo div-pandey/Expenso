@@ -41,7 +41,7 @@ export const HomeDashboard: React.FC = () => {
   const netPaise = currentUserBalance.netBalancePaise;
 
   // If blend has only 1 member (just the current user), show Blend CTA instead of Add Expense
-  const hasBlendFriends = members.length >= 2;
+  const hasBlendFriends = (currentBlend?.memberCount ?? members.length) >= 2 || members.length >= 2;
 
   const copyMyCode = () => {
     navigator.clipboard.writeText(currentUser.inviteCode);
