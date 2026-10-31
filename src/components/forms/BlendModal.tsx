@@ -314,9 +314,31 @@ export const BlendModal: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-xs sm:text-sm font-bold truncate max-w-[180px]">{blend.name}</p>
-                      <p className="text-[10px] text-charcoal-400 font-normal">
-                        {blend.memberCount || 1} member{blend.memberCount === 1 ? '' : 's'}
-                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] text-charcoal-400 font-normal">
+                          {blend.memberCount || 1} member{blend.memberCount === 1 ? '' : 's'}
+                        </span>
+                        {blend.blendCode && (
+                          <>
+                            <span className="text-charcoal-300 text-[10px]">•</span>
+                            <span className="font-mono text-[10px] font-bold bg-warm-100 text-charcoal-700 px-1 rounded border border-warm-200">
+                              {blend.blendCode}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(blend.blendCode || '');
+                                showToast(`Copied Blend Code: ${blend.blendCode}`);
+                              }}
+                              className="p-0.5 hover:bg-warm-200 rounded text-charcoal-500 hover:text-charcoal-800 transition-colors"
+                              title="Copy Blend Code"
+                            >
+                              <Copy className="w-2.5 h-2.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                   {isActive && (
@@ -345,6 +367,9 @@ export const BlendModal: React.FC = () => {
                 autoFocus
                 className="w-full px-3 py-2 text-xs bg-white text-charcoal-900 border border-warm-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-600"
               />
+              <span className="text-[10px] text-charcoal-400 block mt-1">
+                A unique 6-character Blend Code will be generated automatically.
+              </span>
             </div>
 
             <div>

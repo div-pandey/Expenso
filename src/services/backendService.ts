@@ -2,6 +2,7 @@ import { isSupabaseConfigured, supabase } from './supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { sandboxBackend } from './sandboxBackend';
 import { normalizeInviteCode } from '../utils/inviteCodes';
+import { generateUUID } from '../utils/uuid';
 import type {
   UserProfile,
   Blend,
@@ -11,6 +12,7 @@ import type {
   TransportCategory,
   UserPaymentMethod,
   InAppNotification,
+  NotificationType,
 } from '../types';
 
 // ─── Realtime & Cross-Tab Sync Infrastructure ───────────────────────────────
@@ -50,6 +52,9 @@ if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
       } else if (type === 'BLEND_SYNC' && payload?.blend) {
         sandboxBackend.addBlend(payload.blend, payload.members);
         notifySyncListeners({ type: 'BLEND_SYNC', payload });
+      } else if (type === 'NOTIFICATION_SYNC' && payload?.notification) {
+        sandboxBackend.addNotification(payload.notification);
+        notifySyncListeners({ type: 'NOTIFICATION_SYNC', payload });
       } else if (type === 'RELOAD_DATA') {
         notifySyncListeners({ type: 'RELOAD_DATA', payload });
       }
@@ -77,6 +82,12 @@ if (isSupabaseConfigured && supabase) {
         if (payload?.blend) {
           sandboxBackend.addBlend(payload.blend, payload.members);
           notifySyncListeners({ type: 'BLEND_SYNC', payload });
+        }
+      })
+      .on('broadcast', { event: 'NOTIFICATION_SYNC' }, ({ payload }) => {
+        if (payload?.notification) {
+          sandboxBackend.addNotification(payload.notification);
+          notifySyncListeners({ type: 'NOTIFICATION_SYNC', payload });
         }
       })
       .on('broadcast', { event: 'RELOAD_DATA' }, ({ payload }) => {
@@ -239,7 +250,7 @@ export const backendService = {
             avatar_color: localUser.avatarColor,
             invite_code: localUser.inviteCode,
             phone: localUser.phone || null,
-          }, { onConflict: 'invite_code' })
+          }, { onConflict: 'id' })
           .then(async ({ error }) => {
             if (error) {
               console.warn('Supabase profile direct upsert note:', error.message);
@@ -256,7 +267,7 @@ export const backendService = {
                     name: b.name,
                     blend_code: b.blendCode,
                     created_by: localUser.id,
-                  })
+                  }, { onConflict: 'id' })
                   .then(undefined, () => {});
 
                 await client
@@ -265,7 +276,7 @@ export const backendService = {
                     blend_id: b.id,
                     user_id: localUser.id,
                     role: 'admin',
-                  })
+                  }, { onConflict: 'blend_id,user_id' })
                   .then(undefined, () => {});
               }
             }
@@ -295,7 +306,7 @@ export const backendService = {
         const queryPromise = supabase
           .from('profiles')
           .select('*')
-          .eq('invite_code', cleanCode)
+          .ilike('invite_code', cleanCode)
           .maybeSingle();
 
         // 2-second timeout to prevent any hanging network requests
@@ -354,7 +365,7 @@ export const backendService = {
         const queryPromise = supabase
           .from('blends')
           .select('*, blend_members(*, profile:profiles(*))')
-          .eq('blend_code', cleanCode)
+          .ilike('blend_code', cleanCode)
           .maybeSingle();
 
         const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) =>
@@ -436,59 +447,132 @@ export const backendService = {
     return null;
   },
 
-  // Blends
-  async getUserBlends(): Promise<Blend[]> {
-    if (isSupabaseConfigured && supabase && (await this.hasCloudAuthSession())) {
+  async findUserById(userId: string): Promise<UserProfile | null> {
+    const local = sandboxBackend.findUserById(userId);
+    if (local) return local;
+    if (isSupabaseConfigured && supabase) {
       try {
         const { data, error } = await supabase
-          .from('blends')
-          .select('*, blend_members(count)')
-          .order('created_at', { ascending: false });
-        if (!error && data && data.length > 0) {
-          return data.map(b => ({
-            id: b.id,
-            name: b.name,
-            createdBy: b.created_by,
-            createdAt: b.created_at,
-            memberCount: b.blend_members?.[0]?.count || 1,
-            blendCode: b.blend_code,
-          }));
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+        if (!error && data) {
+          const u: UserProfile = {
+            id: data.id,
+            email: data.email,
+            fullName: data.full_name,
+            initials: data.initials,
+            avatarColor: data.avatar_color,
+            inviteCode: data.invite_code,
+            phone: data.phone,
+            createdAt: data.created_at,
+          };
+          sandboxBackend.addUser(u);
+          return u;
+        }
+      } catch {}
+    }
+    return null;
+  },
+
+  // Blends
+  async getUserBlends(): Promise<Blend[]> {
+    const currentUserId = sandboxBackend.getActiveUserId();
+    const localBlends = sandboxBackend.getUserBlends(currentUserId);
+    const blendsMap = new Map<string, Blend>();
+    for (const b of localBlends) {
+      blendsMap.set(b.id, b);
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: memberRows, error: mErr } = await supabase
+          .from('blend_members')
+          .select('blend_id')
+          .eq('user_id', currentUserId);
+
+        if (!mErr && memberRows && memberRows.length > 0) {
+          const blendIds = memberRows.map(r => r.blend_id);
+          const { data: blendsData, error: bErr } = await supabase
+            .from('blends')
+            .select('*, blend_members(count)')
+            .in('id', blendIds)
+            .order('created_at', { ascending: false });
+
+          if (!bErr && blendsData && blendsData.length > 0) {
+            for (const b of blendsData) {
+              const cb: Blend = {
+                id: b.id,
+                name: b.name,
+                createdBy: b.created_by,
+                createdAt: b.created_at,
+                memberCount: b.blend_members?.[0]?.count || 1,
+                blendCode: b.blend_code,
+              };
+              sandboxBackend.addBlend(cb);
+              blendsMap.set(cb.id, cb);
+            }
+          }
         }
       } catch (err) {
-        console.warn('Supabase getUserBlends fallback to sandbox:', err);
+        console.warn('Supabase getUserBlends note:', err);
       }
     }
-    return sandboxBackend.getUserBlends();
+    return Array.from(blendsMap.values());
   },
 
   async getBlendMembers(blendId: string): Promise<BlendMember[]> {
-    if (isSupabaseConfigured && supabase && (await this.hasCloudAuthSession())) {
+    if (isSupabaseConfigured && supabase) {
       try {
         const { data, error } = await supabase
           .from('blend_members')
           .select('*, profile:profiles(*)')
           .eq('blend_id', blendId);
         if (!error && data && data.length > 0) {
+          const memberList: { blendId: string; userId: string; role: 'admin' | 'member'; joinedAt: string }[] = [];
+          for (const bm of data) {
+            memberList.push({
+              blendId: bm.blend_id,
+              userId: bm.user_id,
+              role: bm.role || 'member',
+              joinedAt: bm.joined_at || new Date().toISOString(),
+            });
+            if (bm.profile) {
+              sandboxBackend.addUser({
+                id: bm.profile.id,
+                email: bm.profile.email,
+                fullName: bm.profile.full_name,
+                initials: bm.profile.initials,
+                avatarColor: bm.profile.avatar_color,
+                inviteCode: bm.profile.invite_code,
+                phone: bm.profile.phone,
+                createdAt: bm.profile.created_at,
+              });
+            }
+          }
+          sandboxBackend.addBlendMembers(blendId, memberList);
+
           return data.map(bm => ({
             id: bm.id,
             blendId: bm.blend_id,
             userId: bm.user_id,
-            role: bm.role,
+            role: bm.role as 'admin' | 'member',
             joinedAt: bm.joined_at,
             profile: {
-              id: bm.profile.id,
-              email: bm.profile.email,
-              fullName: bm.profile.full_name,
-              initials: bm.profile.initials,
-              avatarColor: bm.profile.avatar_color,
-              inviteCode: bm.profile.invite_code,
-              phone: bm.profile.phone,
-              createdAt: bm.profile.created_at,
+              id: bm.profile?.id || bm.user_id,
+              email: bm.profile?.email || '',
+              fullName: bm.profile?.full_name || 'Member',
+              initials: bm.profile?.initials || 'M',
+              avatarColor: bm.profile?.avatar_color || 'bg-brand-600 text-white',
+              inviteCode: bm.profile?.invite_code || '',
+              phone: bm.profile?.phone || undefined,
+              createdAt: bm.profile?.created_at || bm.joined_at,
             },
           }));
         }
       } catch (err) {
-        console.warn('Supabase getBlendMembers fallback to sandbox:', err);
+        console.warn('Supabase getBlendMembers fallback note:', err);
       }
     }
     return sandboxBackend.getBlendMembers(blendId);
@@ -502,62 +586,85 @@ export const backendService = {
     }
 
     const newBlend = sandboxBackend.createBlend(name, cleanFriendCode);
+    const currentUser = sandboxBackend.getCurrentUser();
 
-    // Background cloud sync to Supabase blends and blend_members
+    // Await cloud sync to Supabase profiles, blends, and blend_members so it's guaranteed present
     if (isSupabaseConfigured && supabase) {
-      const client = supabase;
       try {
-        client
-          .from('blends')
-          .upsert({
-            id: newBlend.id,
-            name: newBlend.name,
-            blend_code: newBlend.blendCode,
-            created_by: newBlend.createdBy,
-            created_at: newBlend.createdAt,
-          })
-          .then(async ({ error }) => {
-            if (error) {
-              console.warn('Supabase createBlend sync note:', error.message);
-              return;
-            }
-            // Add creator as admin
-            await client
-              .from('blend_members')
-              .upsert({
-                blend_id: newBlend.id,
-                user_id: newBlend.createdBy,
-                role: 'admin',
-              })
-              .then(undefined, () => {});
+        // 1. Ensure creator profile exists in profiles table first to satisfy foreign key constraint!
+        await supabase.from('profiles').upsert({
+          id: currentUser.id,
+          email: currentUser.email,
+          full_name: currentUser.fullName,
+          initials: currentUser.initials,
+          avatar_color: currentUser.avatarColor,
+          invite_code: currentUser.inviteCode,
+          phone: currentUser.phone || null,
+        }, { onConflict: 'id' });
 
-            // If friend code provided, add friend to members in cloud
-            if (cleanFriendCode) {
-              const friend = await this.findUserByInviteCode(cleanFriendCode);
-              if (friend && friend.id !== newBlend.createdBy) {
-                await client
-                  .from('blend_members')
-                  .upsert({
-                    blend_id: newBlend.id,
-                    user_id: friend.id,
-                    role: 'member',
-                  })
-                  .then(undefined, () => {});
-              }
-            }
-          })
-          .then(undefined, () => {});
+        // 2. Upsert the blend
+        await supabase.from('blends').upsert({
+          id: newBlend.id,
+          name: newBlend.name,
+          blend_code: newBlend.blendCode,
+          created_by: newBlend.createdBy,
+          created_at: newBlend.createdAt,
+        }, { onConflict: 'id' });
+
+        // 3. Add creator as admin
+        await supabase.from('blend_members').upsert({
+          blend_id: newBlend.id,
+          user_id: newBlend.createdBy,
+          role: 'admin',
+        }, { onConflict: 'blend_id,user_id' });
+
+        // 4. If friend code provided, add friend to members in cloud
+        if (cleanFriendCode) {
+          const friend = await this.findUserByInviteCode(cleanFriendCode);
+          if (friend && friend.id !== newBlend.createdBy) {
+            await supabase.from('profiles').upsert({
+              id: friend.id,
+              email: friend.email,
+              full_name: friend.fullName,
+              initials: friend.initials,
+              avatar_color: friend.avatarColor,
+              invite_code: friend.inviteCode,
+              phone: friend.phone || null,
+            }, { onConflict: 'id' });
+
+            await supabase.from('blend_members').upsert({
+              blend_id: newBlend.id,
+              user_id: friend.id,
+              role: 'member',
+            }, { onConflict: 'blend_id,user_id' });
+          }
+        }
       } catch (err) {
         console.warn('Supabase createBlend error:', err);
       }
     }
+
+    // Gather full members list and profiles for rich instant sync across tabs and devices
+    const blendMembers = sandboxBackend.getBlendMembers(newBlend.id);
+    const memberList = blendMembers.map(m => ({
+      blendId: m.blendId,
+      userId: m.userId,
+      role: m.role,
+      joinedAt: m.joinedAt,
+    }));
+    const profileList = blendMembers.map(m => m.profile);
+    const syncPayload = { blend: newBlend, members: memberList, profiles: profileList };
 
     // Broadcast new blend to other tabs and network
     if (internalChannel) {
       try {
         internalChannel.postMessage({
           type: 'BLEND_SYNC',
-          payload: { blend: newBlend },
+          payload: syncPayload,
+        });
+        internalChannel.postMessage({
+          type: 'RELOAD_DATA',
+          payload: { blendId: newBlend.id },
         });
       } catch {}
     }
@@ -567,7 +674,12 @@ export const backendService = {
         realtimeChannel.send({
           type: 'broadcast',
           event: 'BLEND_SYNC',
-          payload: { blend: newBlend },
+          payload: syncPayload,
+        });
+        realtimeChannel.send({
+          type: 'broadcast',
+          event: 'RELOAD_DATA',
+          payload: { blendId: newBlend.id },
         });
       } catch {}
     }
@@ -586,42 +698,162 @@ export const backendService = {
 
     // 2. Perform join in local sandbox
     const result = sandboxBackend.joinBlendWithFriendCode(cleanCode, blendId);
+    const currentUser = sandboxBackend.getCurrentUser();
 
-    // 3. Persist membership to Supabase cloud
+    // 3. Resolve blend owner for notifications & cloud persistence
+    const blendOwnerId = result.blend.createdBy;
+    const blendOwner = (await this.findUserById(blendOwnerId)) || result.friend || null;
+    const now = new Date().toISOString();
+    const ownerName = blendOwner?.fullName || 'friend';
+
+    // 4. Create in-app notifications:
+    // (A) For the joiner: "You joined [Owner]'s blend"
+    const joinerNotif: InAppNotification = {
+      id: generateUUID(),
+      userId: currentUser.id,
+      blendId: result.blend.id,
+      type: 'blend_invite' as NotificationType,
+      title: 'Joined a Blend',
+      message: `You joined ${ownerName}'s blend "${result.blend.name}".`,
+      actorId: blendOwner?.id || currentUser.id,
+      isRead: false,
+      isHandled: true,
+      createdAt: now,
+    };
+    sandboxBackend.addNotification(joinerNotif);
+
+    // (B) For the blend owner: "[Joiner] joined your blend"
+    let ownerNotif: InAppNotification | null = null;
+    if (blendOwner && blendOwner.id !== currentUser.id) {
+      ownerNotif = {
+        id: generateUUID(),
+        userId: blendOwner.id,
+        blendId: result.blend.id,
+        type: 'blend_invite' as NotificationType,
+        title: 'New Member Joined',
+        message: `${currentUser.fullName} joined your blend "${result.blend.name}".`,
+        actorId: currentUser.id,
+        isRead: false,
+        isHandled: false,
+        createdAt: now,
+      };
+      sandboxBackend.addNotification(ownerNotif);
+    }
+
+    // 5. Persist profiles, blend, membership, and notifications to Supabase cloud
     if (isSupabaseConfigured && supabase) {
       try {
-        const currentUser = sandboxBackend.getCurrentUser();
-        supabase
-          .from('blends')
-          .upsert({
-            id: result.blend.id,
-            name: result.blend.name,
-            blend_code: result.blend.blendCode,
-            created_by: result.blend.createdBy,
-            created_at: result.blend.createdAt,
-          })
-          .then(undefined, () => {});
+        // Ensure joiner profile is in cloud
+        await supabase.from('profiles').upsert({
+          id: currentUser.id,
+          email: currentUser.email,
+          full_name: currentUser.fullName,
+          initials: currentUser.initials,
+          avatar_color: currentUser.avatarColor,
+          invite_code: currentUser.inviteCode,
+          phone: currentUser.phone || null,
+        }, { onConflict: 'id' });
 
-        supabase
-          .from('blend_members')
-          .upsert({
+        // Ensure owner profile is in cloud
+        if (blendOwner) {
+          await supabase.from('profiles').upsert({
+            id: blendOwner.id,
+            email: blendOwner.email,
+            full_name: blendOwner.fullName,
+            initials: blendOwner.initials,
+            avatar_color: blendOwner.avatarColor,
+            invite_code: blendOwner.inviteCode,
+            phone: blendOwner.phone || null,
+          }, { onConflict: 'id' });
+        }
+
+        // Upsert blend
+        await supabase.from('blends').upsert({
+          id: result.blend.id,
+          name: result.blend.name,
+          blend_code: result.blend.blendCode,
+          created_by: result.blend.createdBy,
+          created_at: result.blend.createdAt,
+        }, { onConflict: 'id' });
+
+        // Upsert joiner as member
+        await supabase.from('blend_members').upsert({
+          blend_id: result.blend.id,
+          user_id: currentUser.id,
+          role: 'member',
+        }, { onConflict: 'blend_id,user_id' });
+
+        // Upsert owner as admin
+        if (blendOwner) {
+          await supabase.from('blend_members').upsert({
             blend_id: result.blend.id,
-            user_id: currentUser.id,
-            role: 'member',
-          })
-          .then(undefined, () => {});
+            user_id: blendOwner.id,
+            role: 'admin',
+          }, { onConflict: 'blend_id,user_id' });
+        }
+
+        // Upsert joiner notification to cloud
+        await supabase.from('in_app_notifications').upsert({
+          id: joinerNotif.id,
+          user_id: joinerNotif.userId,
+          blend_id: joinerNotif.blendId,
+          type: joinerNotif.type,
+          title: joinerNotif.title,
+          message: joinerNotif.message,
+          actor_id: joinerNotif.actorId,
+          is_read: false,
+          is_handled: true,
+          created_at: joinerNotif.createdAt,
+        }, { onConflict: 'id' });
+
+        // Upsert owner notification to cloud
+        if (ownerNotif) {
+          await supabase.from('in_app_notifications').upsert({
+            id: ownerNotif.id,
+            user_id: ownerNotif.userId,
+            blend_id: ownerNotif.blendId,
+            type: ownerNotif.type,
+            title: ownerNotif.title,
+            message: ownerNotif.message,
+            actor_id: ownerNotif.actorId,
+            is_read: false,
+            is_handled: false,
+            created_at: ownerNotif.createdAt,
+          }, { onConflict: 'id' });
+        }
       } catch (err) {
         console.warn('Supabase join sync note:', err);
       }
     }
 
-    // 4. Broadcast to tabs and network so other members automatically see the new member
+    // 6. Gather all current members & profiles for rich cross-device and cross-tab sync
+    const blendMembers = sandboxBackend.getBlendMembers(result.blend.id);
+    const memberList = blendMembers.map(m => ({
+      blendId: m.blendId,
+      userId: m.userId,
+      role: m.role,
+      joinedAt: m.joinedAt,
+    }));
+    const profileList = blendMembers.map(m => m.profile);
+    const syncPayload = { blend: result.blend, members: memberList, profiles: profileList };
+
+    // 7. Broadcast across tabs and network
     if (internalChannel) {
       try {
         internalChannel.postMessage({
           type: 'BLEND_SYNC',
-          payload: { blend: result.blend },
+          payload: syncPayload,
         });
+        internalChannel.postMessage({
+          type: 'NOTIFICATION_SYNC',
+          payload: { notification: joinerNotif },
+        });
+        if (ownerNotif) {
+          internalChannel.postMessage({
+            type: 'NOTIFICATION_SYNC',
+            payload: { notification: ownerNotif },
+          });
+        }
         internalChannel.postMessage({
           type: 'RELOAD_DATA',
           payload: { blendId: result.blend.id },
@@ -634,8 +866,15 @@ export const backendService = {
         realtimeChannel.send({
           type: 'broadcast',
           event: 'BLEND_SYNC',
-          payload: { blend: result.blend },
+          payload: syncPayload,
         });
+        if (ownerNotif) {
+          realtimeChannel.send({
+            type: 'broadcast',
+            event: 'NOTIFICATION_SYNC',
+            payload: { notification: ownerNotif },
+          });
+        }
         realtimeChannel.send({
           type: 'broadcast',
           event: 'RELOAD_DATA',
@@ -1217,15 +1456,60 @@ export const backendService = {
   },
 
   async getNotifications(userId: string): Promise<InAppNotification[]> {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('in_app_notifications')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          for (const n of data) {
+            sandboxBackend.addNotification({
+              id: n.id,
+              userId: n.user_id,
+              blendId: n.blend_id || undefined,
+              type: n.type as NotificationType,
+              title: n.title,
+              message: n.message,
+              settlementId: n.settlement_id || undefined,
+              amountPaise: n.amount_paise ? Number(n.amount_paise) : undefined,
+              actorId: n.actor_id || undefined,
+              proofImageUrl: n.proof_image_url || undefined,
+              isRead: Boolean(n.is_read),
+              isHandled: Boolean(n.is_handled),
+              createdAt: n.created_at,
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('Supabase getNotifications note:', e);
+      }
+    }
     return sandboxBackend.getNotifications(userId);
   },
 
   async markNotificationRead(notificationId: string): Promise<void> {
     sandboxBackend.markNotificationRead(notificationId);
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('in_app_notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId)
+        .then(undefined, () => {});
+    }
   },
 
   async markAllNotificationsRead(userId: string): Promise<void> {
     sandboxBackend.markAllNotificationsRead(userId);
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('in_app_notifications')
+        .update({ is_read: true })
+        .eq('user_id', userId)
+        .then(undefined, () => {});
+    }
   },
 
   resetDemoData(): void {

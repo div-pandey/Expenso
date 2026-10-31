@@ -443,7 +443,7 @@ class SandboxBackendService {
 
     // Create a starter Commute Blend for the newly registered user with unique 6-character Blend Code
     let starterBlendCode = generateInviteCode();
-    while (this.db.blends.some(b => b.blendCode === starterBlendCode)) {
+    while (!starterBlendCode || starterBlendCode.length !== 6 || this.db.blends.some(b => b.blendCode === starterBlendCode)) {
       starterBlendCode = generateInviteCode();
     }
     const starterBlend: Blend = {
@@ -505,6 +505,23 @@ class SandboxBackendService {
     this.saveDB();
   }
 
+  public addBlendMembers(blendId: string, members: { blendId: string; userId: string; role: 'admin' | 'member'; joinedAt: string }[]): void {
+    this.syncFromStorage();
+    if (members && Array.isArray(members)) {
+      for (const m of members) {
+        if (!this.db.blendMembers.some(bm => bm.blendId === blendId && bm.userId === m.userId)) {
+          this.db.blendMembers.push({ ...m, blendId });
+        }
+      }
+    }
+    this.saveDB();
+  }
+
+  public findUserById(userId: string): UserProfile | null {
+    this.syncFromStorage();
+    return this.db.users.find(u => u.id === userId) || null;
+  }
+
   public findUserByInviteCode(code: string): UserProfile | null {
     const normalized = normalizeInviteCode(code);
     this.syncFromStorage();
@@ -535,18 +552,28 @@ class SandboxBackendService {
 
   // --- Blend Management ---
 
-  public getUserBlends(userId: string = this.db.currentUserId): Blend[] {
+  public getUserBlends(userId?: string): Blend[] {
+    const targetUserId = userId || this.getActiveUserId();
     this.syncFromStorage();
     const blendIds = this.db.blendMembers
-      .filter(bm => bm.userId === userId)
+      .filter(bm => bm.userId === targetUserId)
       .map(bm => bm.blendId);
 
     return this.db.blends
       .filter(b => blendIds.includes(b.id))
-      .map(b => ({
-        ...b,
-        memberCount: this.db.blendMembers.filter(bm => bm.blendId === b.id).length,
-      }));
+      .map(b => {
+        let code = b.blendCode;
+        if (!code) {
+          code = generateInviteCode();
+          b.blendCode = code;
+          this.saveDB();
+        }
+        return {
+          ...b,
+          blendCode: code,
+          memberCount: this.db.blendMembers.filter(bm => bm.blendId === b.id).length,
+        };
+      });
   }
 
   public getBlendMembers(blendId: string): BlendMember[] {
@@ -571,7 +598,7 @@ class SandboxBackendService {
   public createBlend(name: string, friendInviteCode?: string): Blend {
     const currentUser = this.getCurrentUser();
     let code = generateInviteCode();
-    while (this.db.blends.some(b => b.blendCode === code)) {
+    while (!code || code.length !== 6 || this.db.blends.some(b => b.blendCode === code)) {
       code = generateInviteCode();
     }
 
@@ -658,7 +685,7 @@ class SandboxBackendService {
       // If friend has no blend, create a new shared Blend together!
       if (!targetBlend) {
         let newBlendCode = generateInviteCode();
-        while (this.db.blends.some(b => b.blendCode === newBlendCode)) {
+        while (!newBlendCode || newBlendCode.length !== 6 || this.db.blends.some(b => b.blendCode === newBlendCode)) {
           newBlendCode = generateInviteCode();
         }
         targetBlend = {
@@ -1158,6 +1185,14 @@ class SandboxBackendService {
     return this.db.notifications
       .filter(n => n.userId === userId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  public addNotification(notif: InAppNotification): void {
+    if (!this.db.notifications) this.db.notifications = [];
+    if (!this.db.notifications.some(n => n.id === notif.id)) {
+      this.db.notifications.unshift(notif);
+      this.saveDB();
+    }
   }
 
   public markNotificationRead(notificationId: string): void {

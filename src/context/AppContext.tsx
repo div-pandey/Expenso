@@ -177,6 +177,8 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const ACTIVE_BLEND_STORAGE_KEY = 'expenso_active_blend_id';
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => sandboxBackend.getCurrentUser());
   const [userBlends, setUserBlends] = useState<Blend[]>([]);
@@ -259,15 +261,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const blends = await backendService.getUserBlends();
       setUserBlends(blends);
 
-      let activeB = currentBlend;
-      if (targetBlendId) {
-        activeB = blends.find(b => b.id === targetBlendId) || blends[0] || null;
-      } else if (!activeB || !blends.some(b => b.id === activeB?.id)) {
-        activeB = blends[0] || null;
-      }
+      const savedBlendId = typeof window !== 'undefined' ? localStorage.getItem(ACTIVE_BLEND_STORAGE_KEY) : null;
+      const preferredId = targetBlendId || savedBlendId || currentBlend?.id;
+
+      let activeB = blends.find(b => b.id === preferredId) || blends[0] || null;
       setCurrentBlend(activeB);
 
       if (activeB) {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(ACTIVE_BLEND_STORAGE_KEY, activeB.id);
+        }
         const [membersData, expensesData, settlementsData, notifsData] = await Promise.all([
           backendService.getBlendMembers(activeB.id),
           backendService.getBlendExpenses(activeB.id),
@@ -289,7 +292,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const errorMessage = err instanceof Error ? err.message : 'Failed to load data';
       showToast(errorMessage, 'error');
     }
-  }, [currentBlend, showToast]);
+  }, [currentBlend?.id, showToast]);
 
   useEffect(() => {
     reloadData();
@@ -333,8 +336,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Realtime & Cross-tab broadcast listener for instant sync
   useEffect(() => {
-    const handleSync = () => {
-      reloadData(currentBlend?.id);
+    const handleSync = (event?: { type: string; payload?: unknown }) => {
+      const p = event?.payload as { blendId?: string; blend?: { id: string } } | undefined;
+      const targetId = p?.blendId || p?.blend?.id || currentBlend?.id;
+      reloadData(targetId);
     };
     backendService.onSync(handleSync);
     return () => {
@@ -410,6 +415,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [reloadData, showToast]);
 
   const switchBlend = useCallback(async (blendId: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(ACTIVE_BLEND_STORAGE_KEY, blendId);
+    }
     await reloadData(blendId);
     showToast('Switched Blend');
   }, [reloadData, showToast]);
@@ -417,8 +425,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const createBlend = useCallback(async (name: string, friendInviteCode?: string) => {
     try {
       const newBlend = await backendService.createBlend(name, friendInviteCode);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(ACTIVE_BLEND_STORAGE_KEY, newBlend.id);
+      }
       setIsBlendModalOpen(false);
-      showToast(`Created Blend "${newBlend.name}"`);
+      showToast(`Created Blend "${newBlend.name}"! Code: ${newBlend.blendCode}`);
       await reloadData(newBlend.id);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to create Blend';
@@ -430,6 +441,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const joinBlendWithFriendCode = useCallback(async (code: string) => {
     try {
       const { blend, friend } = await backendService.joinBlendWithFriendCode(code);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(ACTIVE_BLEND_STORAGE_KEY, blend.id);
+      }
       setIsBlendModalOpen(false);
       if (friend) {
         showToast(`Connected with ${friend.fullName}! Joined "${blend.name}"`);

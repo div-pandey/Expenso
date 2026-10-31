@@ -61,6 +61,31 @@ describe('Security, Payer Ownership & Blend Isolation Engine', () => {
       const members = await backendService.getBlendMembers(result.blend.id);
       expect(members.some(m => m.userId === 'user_you')).toBe(true);
       expect(members.some(m => m.userId === newUser.id)).toBe(true);
+
+      // Verify notifications were created for both joiner and owner
+      const joinerNotifs = await backendService.getNotifications('user_you');
+      expect(joinerNotifs.some(n => n.type === 'blend_invite' && n.message.includes('You joined'))).toBe(true);
+
+      const ownerNotifs = await backendService.getNotifications(newUser.id);
+      expect(ownerNotifs.some(n => n.type === 'blend_invite' && n.message.includes('joined your blend'))).toBe(true);
+    });
+
+    it('generates a unique 6-character blend code every time a new blend is created', async () => {
+      sandboxBackend.switchActiveUser('user_you');
+      const blend1 = await backendService.createBlend('Morning Metro Gang');
+      expect(blend1.blendCode).toBeDefined();
+      expect(blend1.blendCode?.length).toBe(6);
+      expect(isValidInviteCodeFormat(blend1.blendCode || '')).toBe(true);
+
+      const blend2 = await backendService.createBlend('Evening Cab Pool');
+      expect(blend2.blendCode).toBeDefined();
+      expect(blend2.blendCode?.length).toBe(6);
+      expect(blend2.blendCode).not.toBe(blend1.blendCode);
+
+      // Verify the new blend can be found by its blend code
+      const foundBlend = await backendService.findBlendByCode(blend1.blendCode || '');
+      expect(foundBlend).not.toBeNull();
+      expect(foundBlend?.id).toBe(blend1.id);
     });
   });
 
