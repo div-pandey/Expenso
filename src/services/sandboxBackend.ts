@@ -9,6 +9,7 @@ import type {
   InAppNotification,
 } from '../types';
 import { generateInviteCode, normalizeInviteCode } from '../utils/inviteCodes';
+import { generateUUID } from '../utils/uuid';
 import { calculateEqualShares } from '../utils/calculations';
 
 const SANDBOX_STORAGE_KEY = 'expenso_multiuser_sandbox_v5';
@@ -384,7 +385,7 @@ class SandboxBackendService {
           blendCode = generateInviteCode();
         }
         const starterBlend: Blend = {
-          id: `blend_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          id: generateUUID(),
           name: `${existing.fullName}'s Commute Blend`,
           createdBy: existing.id,
           createdAt: new Date().toISOString(),
@@ -427,7 +428,7 @@ class SandboxBackendService {
     const avatarColor = colors[this.db.users.length % colors.length];
 
     const newUser: UserProfile = {
-      id: `user_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: generateUUID(),
       email: normalizedEmail,
       fullName: fullName.trim(),
       initials,
@@ -446,7 +447,7 @@ class SandboxBackendService {
       starterBlendCode = generateInviteCode();
     }
     const starterBlend: Blend = {
-      id: `blend_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: generateUUID(),
       name: `${fullName.trim()}'s Commute Blend`,
       createdBy: newUser.id,
       createdAt: new Date().toISOString(),
@@ -575,7 +576,7 @@ class SandboxBackendService {
     }
 
     const newBlend: Blend = {
-      id: `blend_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: generateUUID(),
       name: name.trim(),
       createdBy: currentUser.id,
       createdAt: new Date().toISOString(),
@@ -661,7 +662,7 @@ class SandboxBackendService {
           newBlendCode = generateInviteCode();
         }
         targetBlend = {
-          id: `blend_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          id: generateUUID(),
           name: `${friend.fullName} & ${currentUser.fullName} Blend`,
           createdBy: currentUser.id,
           createdAt: new Date().toISOString(),
@@ -771,7 +772,7 @@ class SandboxBackendService {
     const shares = calculateEqualShares(data.amountPaise, data.participantIds);
 
     const newExpense: Expense = {
-      id: `exp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: generateUUID(),
       blendId,
       createdBy: currentUser.id,
       payerId: currentUser.id, // Strictly bound to authenticated user
@@ -891,7 +892,7 @@ class SandboxBackendService {
     }
 
     const newSettlement: Settlement = {
-      id: `set_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: generateUUID(),
       blendId,
       createdBy: currentUser.id,
       fromMemberId: data.fromMemberId,
@@ -936,7 +937,7 @@ class SandboxBackendService {
     }
 
     const newSettlement: Settlement = {
-      id: `set_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: generateUUID(),
       blendId,
       createdBy: currentUser.id,
       fromMemberId: currentUser.id,
@@ -980,7 +981,7 @@ class SandboxBackendService {
     const amountRupees = (s.amountPaise / 100).toFixed(2);
 
     const notif: InAppNotification = {
-      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: generateUUID(),
       userId: s.toMemberId,
       blendId: s.blendId,
       type: 'settlement_proof_submitted',
@@ -1036,7 +1037,7 @@ class SandboxBackendService {
       // Send confirmation notification to sender
       const amountRupees = (s.amountPaise / 100).toFixed(2);
       this.db.notifications.unshift({
-        id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        id: generateUUID(),
         userId: s.fromMemberId,
         blendId: s.blendId,
         type: 'settlement_confirmed',
@@ -1085,7 +1086,7 @@ class SandboxBackendService {
       // Notify sender that payment was not received
       const amountRupees = (s.amountPaise / 100).toFixed(2);
       this.db.notifications.unshift({
-        id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        id: generateUUID(),
         userId: s.fromMemberId,
         blendId: s.blendId,
         type: 'settlement_rejected',
