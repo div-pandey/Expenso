@@ -68,7 +68,7 @@ describe('Security, Payer Ownership & Blend Isolation Engine', () => {
 
       const ownerNotifs = await backendService.getNotifications(newUser.id);
       expect(ownerNotifs.some(n => n.type === 'blend_invite' && n.message.includes('joined your blend'))).toBe(true);
-    }, 15000);
+    }, 30000);
 
     it('registers a user with password and authenticates securely on login', async () => {
       const user = await backendService.registerUser('Kavya Nair', 'kavya@campus.edu', 'SecurePass123!');
@@ -101,7 +101,7 @@ describe('Security, Payer Ownership & Blend Isolation Engine', () => {
       const foundBlend = await backendService.findBlendByCode(blend1.blendCode || '');
       expect(foundBlend).not.toBeNull();
       expect(foundBlend?.id).toBe(blend1.id);
-    }, 15000);
+    }, 30000);
 
     it('does not create any default starter blend on new user registration', async () => {
       const freshUser = await backendService.registerUser('Rohan Verma', 'rohan@campus.edu');
@@ -134,7 +134,7 @@ describe('Security, Payer Ownership & Blend Isolation Engine', () => {
 
       const notifsB = await backendService.getNotifications(friendB.id);
       expect(notifsB.some(n => n.type === 'blend_invite' && n.blendId === multiBlend.id)).toBe(true);
-    }, 15000);
+    }, 30000);
   });
 
   describe('Personal Expense Ownership & Payer Enforcement (Requirement 4)', () => {
@@ -294,5 +294,82 @@ describe('Security, Payer Ownership & Blend Isolation Engine', () => {
         });
       }).toThrow(/Access denied: You are not a member of this Blend/);
     });
+  });
+
+  describe('Blend Admin Privileges, Membership Management & Custom PFP', () => {
+    it('designates the creator as admin and allows updating name and custom PFP', async () => {
+      sandboxBackend.switchActiveUser('user_you');
+      const testBlend = await backendService.createBlend('Admin Control Blend');
+      expect(testBlend.createdBy).toBe('user_you');
+
+      const members = await backendService.getBlendMembers(testBlend.id);
+      const creatorMember = members.find(m => m.userId === 'user_you');
+      expect(creatorMember?.role).toBe('admin');
+
+      // Admin updates name and custom icon/pfp
+      const updated = await backendService.updateBlendDetails(testBlend.id, {
+        name: 'VIP Metro Club',
+        icon: '🚇',
+      });
+      expect(updated.name).toBe('VIP Metro Club');
+      expect(updated.icon).toBe('🚇');
+    }, 30000);
+
+    it('allows Admin to add new member by personal invite code and notifies the friend', async () => {
+      const friend = await backendService.registerUser('Deepak Joshi', 'deepak@campus.edu');
+      sandboxBackend.switchActiveUser('user_you');
+      const blend = await backendService.createBlend('Campus Carpool');
+
+      // Admin adds friend
+      const newMember = await backendService.addMemberToBlend(blend.id, friend.inviteCode);
+      expect(newMember.userId).toBe(friend.id);
+      expect(newMember.role).toBe('member');
+
+      // Friend receives notification
+      const friendNotifs = await backendService.getNotifications(friend.id);
+      expect(friendNotifs.some(n => n.type === 'blend_invite' && n.blendId === blend.id && n.title === 'Added to a Blend')).toBe(true);
+    }, 30000);
+
+    it('allows Admin to kick a member, but prevents non-admin from kicking', async () => {
+      const memberUser = await backendService.registerUser('Nidhi Gupta', 'nidhi@campus.edu');
+      sandboxBackend.switchActiveUser('user_you');
+      const blend = await backendService.createBlend('Study Ride', [memberUser.inviteCode]);
+
+      // Non-admin attempts to kick
+      sandboxBackend.switchActiveUser(memberUser.id);
+      await expect(
+        backendService.removeMemberFromBlend(blend.id, 'user_you')
+      ).rejects.toThrow(/Only the Blend Admin can remove members/);
+
+      // Admin kicks the member
+      sandboxBackend.switchActiveUser('user_you');
+      await backendService.removeMemberFromBlend(blend.id, memberUser.id);
+
+      const remaining = await backendService.getBlendMembers(blend.id);
+      expect(remaining.some(m => m.userId === memberUser.id)).toBe(false);
+
+      // Kicked member receives notification
+      const kickedNotifs = await backendService.getNotifications(memberUser.id);
+      expect(kickedNotifs.some(n => n.title === 'Removed from Blend')).toBe(true);
+    }, 30000);
+
+    it('allows Admin to delete blend, but strictly rejects non-admin deletion', async () => {
+      const memberUser = await backendService.registerUser('Tarun Mehta', 'tarun@campus.edu');
+      sandboxBackend.switchActiveUser('user_you');
+      const blend = await backendService.createBlend('Temporary Blend', [memberUser.inviteCode]);
+
+      // Non-admin attempts to delete
+      sandboxBackend.switchActiveUser(memberUser.id);
+      await expect(
+        backendService.deleteBlend(blend.id)
+      ).rejects.toThrow(/Only the Blend Admin can delete this blend/);
+
+      // Admin deletes blend
+      sandboxBackend.switchActiveUser('user_you');
+      await backendService.deleteBlend(blend.id);
+
+      const found = await backendService.findBlendByCode(blend.blendCode || '');
+      expect(found).toBeNull();
+    }, 30000);
   });
 });

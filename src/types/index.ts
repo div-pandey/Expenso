@@ -56,6 +56,7 @@ export interface Blend {
   createdAt: string;
   memberCount?: number;
   blendCode?: string; // 6-character unique alphanumeric blend code
+  icon?: string; // Emoji, preset icon, or custom image data URL for blend profile picture
 }
 
 export interface BlendMember {
@@ -77,6 +78,7 @@ export interface Member {
   phone?: string;
   inviteCode?: string;
   paymentMethod?: UserPaymentMethod;
+  role?: 'admin' | 'member';
 }
 
 export interface Group {

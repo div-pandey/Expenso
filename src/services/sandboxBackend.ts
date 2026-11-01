@@ -112,6 +112,11 @@ const INITIAL_SETTLEMENTS: Settlement[] = [];
 
 class SandboxBackendService {
   private db: SandboxDB;
+  private deletedBlendIds = new Set<string>();
+
+  public isBlendDeleted(blendId: string): boolean {
+    return this.deletedBlendIds.has(blendId);
+  }
 
   constructor() {
     this.db = this.loadDB();
@@ -142,6 +147,7 @@ class SandboxBackendService {
           }
           if (parsed && Array.isArray(parsed.blends)) {
             for (const sb of parsed.blends) {
+              if (this.deletedBlendIds.has(sb.id)) continue;
               const idx = this.db.blends.findIndex(b => b.id === sb.id);
               if (idx >= 0) {
                 this.db.blends[idx] = { ...this.db.blends[idx], ...sb };
@@ -277,6 +283,7 @@ class SandboxBackendService {
             }
             if (stored.blends && Array.isArray(stored.blends)) {
               for (const sb of stored.blends) {
+                if (this.deletedBlendIds.has(sb.id)) continue;
                 if (!db.blends.some(b => b.id === sb.id)) {
                   db.blends.push(sb);
                 }
@@ -498,9 +505,9 @@ class SandboxBackendService {
   public findBlendByCode(code: string): Blend | null {
     const normalized = normalizeInviteCode(code);
     this.syncFromStorage();
-    let blend = this.db.blends.find(b => b.blendCode === normalized || b.id === normalized);
+    let blend = this.db.blends.find(b => !this.deletedBlendIds.has(b.id) && (b.blendCode === normalized || b.id === normalized));
     if (!blend) {
-      blend = this.db.blends.find(b => b.blendCode?.trim().toUpperCase() === normalized);
+      blend = this.db.blends.find(b => !this.deletedBlendIds.has(b.id) && b.blendCode?.trim().toUpperCase() === normalized);
     }
     return blend || null;
   }
@@ -711,11 +718,164 @@ class SandboxBackendService {
     return { blend: targetBlend, friend };
   }
 
+  public isBlendAdmin(blendId: string, userId?: string): boolean {
+    const targetUserId = userId || this.getActiveUserId();
+    const blend = this.db.blends.find(b => b.id === blendId);
+    if (!blend) return false;
+    if (blend.createdBy === targetUserId) return true;
+    return this.db.blendMembers.some(
+      bm => bm.blendId === blendId && bm.userId === targetUserId && bm.role === 'admin'
+    );
+  }
+
   public updateBlendName(blendId: string, newName: string): void {
+    this.updateBlendDetails(blendId, { name: newName });
+  }
+
+  public updateBlendDetails(blendId: string, updates: { name?: string; icon?: string }): Blend {
+    const currentUser = this.getCurrentUser();
     const blend = this.db.blends.find(b => b.id === blendId);
     if (!blend) throw new Error('Blend not found');
-    blend.name = newName.trim();
+    if (!this.isBlendAdmin(blendId, currentUser.id)) {
+      throw new Error('Only the Blend Admin can modify blend details.');
+    }
+    if (updates.name !== undefined && updates.name.trim()) {
+      blend.name = updates.name.trim();
+    }
+    if (updates.icon !== undefined) {
+      blend.icon = updates.icon.trim() || undefined;
+    }
     this.saveDB();
+    return blend;
+  }
+
+  public forceDeleteBlend(blendId: string): void {
+    // Remove all members
+    this.db.blendMembers = this.db.blendMembers.filter(bm => bm.blendId !== blendId);
+    // Remove all expenses
+    this.db.expenses = this.db.expenses.filter(e => e.blendId !== blendId);
+    // Remove all settlements
+    this.db.settlements = this.db.settlements.filter(s => s.blendId !== blendId);
+    // Remove notifications for this blend
+    if (this.db.notifications) {
+      this.db.notifications = this.db.notifications.filter(n => n.blendId !== blendId);
+    }
+    // Remove blend
+    this.db.blends = this.db.blends.filter(b => b.id !== blendId);
+    this.deletedBlendIds.add(blendId);
+    this.saveDB();
+  }
+
+  public deleteBlend(blendId: string): void {
+    const currentUser = this.getCurrentUser();
+    const blend = this.db.blends.find(b => b.id === blendId);
+    if (!blend) throw new Error('Blend not found');
+    if (!this.isBlendAdmin(blendId, currentUser.id)) {
+      throw new Error('Only the Blend Admin can delete this blend.');
+    }
+    this.forceDeleteBlend(blendId);
+  }
+
+  public removeMemberFromBlend(blendId: string, memberUserId: string): void {
+    const currentUser = this.getCurrentUser();
+    const blend = this.db.blends.find(b => b.id === blendId);
+    if (!blend) throw new Error('Blend not found');
+    const isAdmin = this.isBlendAdmin(blendId, currentUser.id);
+    const isSelf = currentUser.id === memberUserId;
+
+    if (!isAdmin && !isSelf) {
+      throw new Error('Only the Blend Admin can remove members.');
+    }
+    if (blend.createdBy === memberUserId && !isSelf) {
+      throw new Error('The Blend Admin / Creator cannot be removed.');
+    }
+
+    this.db.blendMembers = this.db.blendMembers.filter(
+      bm => !(bm.blendId === blendId && bm.userId === memberUserId)
+    );
+    blend.memberCount = this.db.blendMembers.filter(bm => bm.blendId === blendId).length;
+
+    // Send notification to the removed member if removed by someone else
+    if (!isSelf) {
+      const removedNotif: InAppNotification = {
+        id: generateUUID(),
+        userId: memberUserId,
+        blendId: blend.id,
+        type: 'blend_invite',
+        title: 'Removed from Blend',
+        message: `You were removed from "${blend.name}" by ${currentUser.fullName}.`,
+        actorId: currentUser.id,
+        isRead: false,
+        isHandled: false,
+        createdAt: new Date().toISOString(),
+      };
+      this.addNotification(removedNotif);
+    }
+    this.saveDB();
+  }
+
+  public addMemberToBlend(blendId: string, friendInviteCode: string): BlendMember {
+    const currentUser = this.getCurrentUser();
+    const blend = this.db.blends.find(b => b.id === blendId);
+    if (!blend) throw new Error('Blend not found');
+    if (!this.isBlendAdmin(blendId, currentUser.id)) {
+      throw new Error('Only the Blend Admin can add members to this blend.');
+    }
+
+    const cleanCode = normalizeInviteCode(friendInviteCode);
+    const isBlendCode = this.db.blends.some(b => b.blendCode === cleanCode);
+    if (isBlendCode) {
+      throw new Error("This is a blend code, not a personal invite code. Please enter your friend's personal code.");
+    }
+
+    const friend = this.findUserByInviteCode(cleanCode);
+    if (!friend) {
+      throw new Error(`No user found with personal code "${cleanCode}".`);
+    }
+    if (friend.id === currentUser.id) {
+      throw new Error('You cannot add yourself to the blend.');
+    }
+
+    const alreadyMember = this.db.blendMembers.some(
+      bm => bm.blendId === blendId && bm.userId === friend.id
+    );
+    if (alreadyMember) {
+      throw new Error(`${friend.fullName} is already a member of this blend.`);
+    }
+
+    const joinedAt = new Date().toISOString();
+    this.db.blendMembers.push({
+      blendId: blend.id,
+      userId: friend.id,
+      role: 'member',
+      joinedAt,
+    });
+    blend.memberCount = (blend.memberCount || 1) + 1;
+
+    // Send notification to friend
+    const friendNotif: InAppNotification = {
+      id: generateUUID(),
+      userId: friend.id,
+      blendId: blend.id,
+      type: 'blend_invite',
+      title: 'Added to a Blend',
+      message: `${currentUser.fullName} added you to blend "${blend.name}".`,
+      actorId: currentUser.id,
+      isRead: false,
+      isHandled: false,
+      createdAt: joinedAt,
+    };
+    this.addNotification(friendNotif);
+
+    this.saveDB();
+    return {
+      id: generateUUID(),
+      blendId: blend.id,
+      userId: friend.id,
+      role: 'member',
+      joinedAt,
+      profile: friend,
+    };
   }
 
   // --- Expenses & Payer Ownership Rule Enforcement ---

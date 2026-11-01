@@ -56,6 +56,9 @@ if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
       } else if (type === 'NOTIFICATION_SYNC' && payload?.notification) {
         sandboxBackend.addNotification(payload.notification);
         notifySyncListeners({ type: 'NOTIFICATION_SYNC', payload });
+      } else if (type === 'DELETE_BLEND' && payload?.blendId) {
+        sandboxBackend.forceDeleteBlend(payload.blendId);
+        notifySyncListeners({ type: 'RELOAD_DATA', payload });
       } else if (type === 'RELOAD_DATA') {
         notifySyncListeners({ type: 'RELOAD_DATA', payload });
       }
@@ -91,6 +94,12 @@ if (isSupabaseConfigured && supabase) {
           notifySyncListeners({ type: 'NOTIFICATION_SYNC', payload });
         }
       })
+      .on('broadcast', { event: 'DELETE_BLEND' }, ({ payload }) => {
+        if (payload?.blendId) {
+          sandboxBackend.forceDeleteBlend(payload.blendId);
+          notifySyncListeners({ type: 'RELOAD_DATA', payload });
+        }
+      })
       .on('broadcast', { event: 'RELOAD_DATA' }, ({ payload }) => {
         notifySyncListeners({ type: 'RELOAD_DATA', payload });
       })
@@ -98,11 +107,12 @@ if (isSupabaseConfigured && supabase) {
         if (payload?.code) {
           const user = sandboxBackend.findUserByInviteCode(payload.code);
           const blend = sandboxBackend.findBlendByCode(payload.code);
-          if (user || blend) {
+          const validBlend = blend && !sandboxBackend.isBlendDeleted(blend.id) ? blend : undefined;
+          if (user || validBlend) {
             realtimeChannel?.send({
               type: 'broadcast',
               event: 'CODE_RESPONSE',
-              payload: { code: payload.code, user, blend },
+              payload: { code: payload.code, user, blend: validBlend },
             });
           }
         }
@@ -447,6 +457,9 @@ export const backendService = {
 
         const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
         if (!error && data) {
+          if (sandboxBackend.isBlendDeleted(data.id)) {
+            return null;
+          }
           const membersList: { blendId: string; userId: string; role: 'admin' | 'member'; joinedAt: string }[] = [];
           if (Array.isArray(data.blend_members)) {
             for (const bm of data.blend_members) {
@@ -492,6 +505,9 @@ export const backendService = {
       try {
         const peerResult = await queryPeerCode(cleanCode);
         if (peerResult?.blend) {
+          if (sandboxBackend.isBlendDeleted(peerResult.blend.id)) {
+            return null;
+          }
           sandboxBackend.addBlend(peerResult.blend);
           return peerResult.blend;
         }
@@ -550,8 +566,8 @@ export const backendService = {
   },
 
   // Blends
-  async getUserBlends(): Promise<Blend[]> {
-    const currentUserId = sandboxBackend.getActiveUserId();
+  async getUserBlends(userId?: string): Promise<Blend[]> {
+    const currentUserId = userId || sandboxBackend.getActiveUserId();
     const localBlends = sandboxBackend.getUserBlends(currentUserId);
     const blendsMap = new Map<string, Blend>();
     for (const b of localBlends) {
@@ -983,19 +999,162 @@ export const backendService = {
     return result;
   },
 
-  async updateBlendName(blendId: string, name: string): Promise<void> {
-    if (isSupabaseConfigured && supabase && (await this.hasCloudAuthSession())) {
+  async updateBlendDetails(blendId: string, updates: { name?: string; icon?: string }): Promise<Blend> {
+    const updated = sandboxBackend.updateBlendDetails(blendId, updates);
+
+    if (isSupabaseConfigured && supabase) {
       try {
-        const { error } = await supabase
-          .from('blends')
-          .update({ name: name.trim() })
-          .eq('id', blendId);
-        if (!error) return;
+        const payload: Record<string, unknown> = {};
+        if (updates.name !== undefined) payload.name = updates.name.trim();
+        if (updates.icon !== undefined) payload.icon = updates.icon.trim() || null;
+
+        const { error } = await supabase.from('blends').update(payload).eq('id', blendId);
+        if (error && error.code === '42703' && updates.icon !== undefined) {
+          if (updates.name !== undefined) {
+            await supabase.from('blends').update({ name: updates.name.trim() }).eq('id', blendId);
+          }
+        }
       } catch (err) {
-        console.warn('Supabase updateBlendName fallback to sandbox:', err);
+        console.warn('Supabase updateBlendDetails error:', err);
       }
     }
-    sandboxBackend.updateBlendName(blendId, name);
+
+    if (internalChannel) {
+      try { internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId } }); } catch {}
+    }
+    if (realtimeChannel) {
+      try { realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId } }); } catch {}
+    }
+
+    return updated;
+  },
+
+  async updateBlendName(blendId: string, name: string): Promise<void> {
+    await this.updateBlendDetails(blendId, { name });
+  },
+
+  async deleteBlend(blendId: string): Promise<void> {
+    sandboxBackend.deleteBlend(blendId);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('in_app_notifications').delete().eq('blend_id', blendId);
+        await supabase.from('settlements').delete().eq('blend_id', blendId);
+        await supabase.from('expenses').delete().eq('blend_id', blendId);
+        await supabase.from('blend_members').delete().eq('blend_id', blendId);
+        await supabase.from('blends').delete().eq('id', blendId);
+      } catch (err) {
+        console.warn('Supabase deleteBlend error:', err);
+      }
+    }
+
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({ type: 'DELETE_BLEND', payload: { blendId } });
+        internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId } });
+      } catch {}
+    }
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({ type: 'broadcast', event: 'DELETE_BLEND', payload: { blendId } });
+        realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId } });
+      } catch {}
+    }
+  },
+
+  async removeMemberFromBlend(blendId: string, memberUserId: string): Promise<void> {
+    sandboxBackend.removeMemberFromBlend(blendId, memberUserId);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase
+          .from('blend_members')
+          .delete()
+          .eq('blend_id', blendId)
+          .eq('user_id', memberUserId);
+
+        const notifs = sandboxBackend.getNotifications(memberUserId);
+        const latestNotif = notifs.find(n => n.blendId === blendId && n.title === 'Removed from Blend');
+        if (latestNotif) {
+          await supabase.from('in_app_notifications').upsert({
+            id: latestNotif.id,
+            user_id: latestNotif.userId,
+            blend_id: latestNotif.blendId,
+            type: latestNotif.type,
+            title: latestNotif.title,
+            message: latestNotif.message,
+            actor_id: latestNotif.actorId,
+            is_read: latestNotif.isRead,
+            is_handled: latestNotif.isHandled,
+            created_at: latestNotif.createdAt,
+          }, { onConflict: 'id' });
+        }
+      } catch (err) {
+        console.warn('Supabase removeMemberFromBlend error:', err);
+      }
+    }
+
+    if (internalChannel) {
+      try { internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId } }); } catch {}
+    }
+    if (realtimeChannel) {
+      try { realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId } }); } catch {}
+    }
+  },
+
+  async addMemberToBlend(blendId: string, friendInviteCode: string): Promise<BlendMember> {
+    const cleanCode = normalizeInviteCode(friendInviteCode);
+    await this.findUserByInviteCode(cleanCode);
+
+    const newMember = sandboxBackend.addMemberToBlend(blendId, cleanCode);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('profiles').upsert({
+          id: newMember.profile.id,
+          email: newMember.profile.email,
+          full_name: newMember.profile.fullName,
+          initials: newMember.profile.initials,
+          avatar_color: newMember.profile.avatarColor,
+          invite_code: newMember.profile.inviteCode,
+          phone: newMember.profile.phone || null,
+        }, { onConflict: 'id' });
+
+        await supabase.from('blend_members').upsert({
+          blend_id: blendId,
+          user_id: newMember.userId,
+          role: 'member',
+        }, { onConflict: 'blend_id,user_id' });
+
+        const notifs = sandboxBackend.getNotifications(newMember.userId);
+        const latestNotif = notifs.find(n => n.blendId === blendId && n.title === 'Added to a Blend');
+        if (latestNotif) {
+          await supabase.from('in_app_notifications').upsert({
+            id: latestNotif.id,
+            user_id: latestNotif.userId,
+            blend_id: latestNotif.blendId,
+            type: latestNotif.type,
+            title: latestNotif.title,
+            message: latestNotif.message,
+            actor_id: latestNotif.actorId,
+            is_read: latestNotif.isRead,
+            is_handled: latestNotif.isHandled,
+            created_at: latestNotif.createdAt,
+          }, { onConflict: 'id' });
+        }
+      } catch (err) {
+        console.warn('Supabase addMemberToBlend error:', err);
+      }
+    }
+
+    if (internalChannel) {
+      try { internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId } }); } catch {}
+    }
+    if (realtimeChannel) {
+      try { realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId } }); } catch {}
+    }
+
+    return newMember;
   },
 
   // Expenses with Payer Enforcement

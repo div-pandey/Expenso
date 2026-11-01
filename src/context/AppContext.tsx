@@ -76,11 +76,16 @@ interface AppContextType {
   closeEditExpense: () => void;
 
   // Multi-user & Blend actions
+  isBlendAdmin: boolean;
   switchAccount: (userId: string) => Promise<void>;
   switchBlend: (blendId: string) => Promise<void>;
   createBlend: (name: string, friendInviteCodes?: string[]) => Promise<void>;
   joinBlendWithFriendCode: (friendInviteCode: string) => Promise<void>;
   updateBlendName: (name: string) => Promise<void>;
+  updateBlendDetails: (updates: { name?: string; icon?: string }) => Promise<void>;
+  deleteBlend: (blendId?: string) => Promise<void>;
+  removeMemberFromBlend: (memberUserId: string) => Promise<void>;
+  addMemberToBlend: (friendInviteCode: string) => Promise<void>;
   validateInviteCode: (code: string) => Promise<{ valid: boolean; name?: string; isBlend?: boolean; error?: string }>;
 
   // Financial actions
@@ -358,8 +363,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       phone: bm.profile.phone,
       inviteCode: bm.profile.inviteCode,
       paymentMethod: bm.profile.paymentMethod,
+      role: bm.role,
     }));
   }, [blendMembers, currentUser.id]);
+
+  const isBlendAdmin = useMemo(() => {
+    if (!currentBlend) return false;
+    if (currentBlend.createdBy === currentUser.id) return true;
+    return blendMembers.some(bm => bm.userId === currentUser.id && bm.role === 'admin');
+  }, [currentBlend, currentUser.id, blendMembers]);
 
   // Financial calculations
   const balances = useMemo(() => {
@@ -490,6 +502,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await reloadData(currentBlend.id);
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Failed to update Blend name', 'error');
+    }
+  }, [currentBlend, reloadData, showToast]);
+
+  const updateBlendDetails = useCallback(async (updates: { name?: string; icon?: string }) => {
+    if (!currentBlend) return;
+    try {
+      const updated = await backendService.updateBlendDetails(currentBlend.id, updates);
+      setCurrentBlend(updated);
+      showToast('Blend updated successfully');
+      await reloadData(currentBlend.id);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to update Blend';
+      showToast(msg, 'error');
+      throw e;
+    }
+  }, [currentBlend, reloadData, showToast]);
+
+  const deleteBlend = useCallback(async (blendIdToDelete?: string) => {
+    const targetId = blendIdToDelete || currentBlend?.id;
+    if (!targetId) return;
+    try {
+      await backendService.deleteBlend(targetId);
+      showToast('Blend deleted successfully');
+      if (typeof window !== 'undefined' && localStorage.getItem(ACTIVE_BLEND_STORAGE_KEY) === targetId) {
+        localStorage.removeItem(ACTIVE_BLEND_STORAGE_KEY);
+      }
+      const updatedBlends = await backendService.getUserBlends(currentUser.id);
+      setUserBlends(updatedBlends);
+      const nextBlend = updatedBlends[0] || null;
+      setCurrentBlend(nextBlend);
+      if (nextBlend) {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(ACTIVE_BLEND_STORAGE_KEY, nextBlend.id);
+        }
+        await reloadData(nextBlend.id);
+      } else {
+        await reloadData();
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to delete Blend';
+      showToast(msg, 'error');
+      throw e;
+    }
+  }, [currentBlend?.id, currentUser.id, reloadData, showToast]);
+
+  const removeMemberFromBlend = useCallback(async (memberUserId: string) => {
+    if (!currentBlend) return;
+    try {
+      await backendService.removeMemberFromBlend(currentBlend.id, memberUserId);
+      showToast('Member removed from blend');
+      await reloadData(currentBlend.id);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to remove member';
+      showToast(msg, 'error');
+      throw e;
+    }
+  }, [currentBlend, reloadData, showToast]);
+
+  const addMemberToBlend = useCallback(async (friendInviteCode: string) => {
+    if (!currentBlend) return;
+    try {
+      const newMember = await backendService.addMemberToBlend(currentBlend.id, friendInviteCode);
+      showToast(`Added ${newMember.profile.fullName} to ${currentBlend.name}!`);
+      await reloadData(currentBlend.id);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to add member';
+      showToast(msg, 'error');
+      throw e;
     }
   }, [currentBlend, reloadData, showToast]);
 
@@ -830,11 +910,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         closeExpenseDetails: () => setViewingExpense(null),
         openEditExpense: exp => setEditingExpense(exp),
         closeEditExpense: () => setEditingExpense(null),
+        isBlendAdmin,
         switchAccount,
         switchBlend,
         createBlend,
         joinBlendWithFriendCode,
         updateBlendName,
+        updateBlendDetails,
+        deleteBlend,
+        removeMemberFromBlend,
+        addMemberToBlend,
         validateInviteCode,
         addExpense,
         updateExpense,

@@ -1,7 +1,9 @@
-﻿import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { isValidInviteCodeFormat } from '../../utils/inviteCodes';
-import { X, Copy, Check, Users, Loader2, UserCheck, AlertCircle, Plus } from 'lucide-react';
+import { X, Copy, Check, Users, Loader2, UserCheck, AlertCircle, Plus, Crown, Trash2 } from 'lucide-react';
+import { BlendAvatar } from '../common/BlendAvatar';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface ConfirmedFriend {
   code: string;
@@ -19,11 +21,13 @@ export const BlendModal: React.FC = () => {
     createBlend,
     joinBlendWithFriendCode,
     validateInviteCode,
+    deleteBlend,
     showToast,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'switch' | 'create' | 'join'>('switch');
   const [blendName, setBlendName] = useState('');
+  const [blendToDelete, setBlendToDelete] = useState<typeof userBlends[0] | null>(null);
 
   // Multi-friend state for Create tab
   const [currentFriendCode, setCurrentFriendCode] = useState('');
@@ -335,27 +339,45 @@ export const BlendModal: React.FC = () => {
               )}
               {userBlends.map(blend => {
                 const isActive = currentBlend?.id === blend.id;
+                const isCreator = blend.createdBy === currentUser.id;
                 return (
                   <div
                     key={blend.id}
                     onClick={() => { switchBlend(blend.id); closeBlendModal(); }}
-                    className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${isActive ? 'border-brand-600 bg-brand-50/80 text-brand-950 font-bold ring-1 ring-brand-600' : 'border-warm-200 bg-white hover:bg-warm-100 text-charcoal-800'}`}
+                    className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                      isActive
+                        ? 'border-brand-600 bg-brand-50/80 text-brand-950 font-bold ring-1 ring-brand-600'
+                        : 'border-warm-200 bg-white hover:bg-warm-100 text-charcoal-800'
+                    }`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-warm-100 flex items-center justify-center text-xs font-bold text-charcoal-700">
-                        {blend.name.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-xs sm:text-sm font-bold truncate max-w-[180px]">{blend.name}</p>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <BlendAvatar name={blend.name} icon={blend.icon} size="sm" />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs sm:text-sm font-bold truncate max-w-[140px] sm:max-w-[170px]">{blend.name}</p>
+                          {isCreator && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 shrink-0">
+                              <Crown className="w-2.5 h-2.5 text-amber-600" /> Admin
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[10px] text-charcoal-400 font-normal">{blend.memberCount || 1} member{blend.memberCount === 1 ? '' : 's'}</span>
+                          <span className="text-[10px] text-charcoal-400 font-normal">
+                            {blend.memberCount || 1} member{blend.memberCount === 1 ? '' : 's'}
+                          </span>
                           {blend.blendCode && (
                             <>
-                              <span className="text-charcoal-300 text-[10px]">â€¢</span>
-                              <span className="font-mono text-[10px] font-bold bg-warm-100 text-charcoal-700 px-1 rounded border border-warm-200">{blend.blendCode}</span>
+                              <span className="text-charcoal-300 text-[10px]">•</span>
+                              <span className="font-mono text-[10px] font-bold bg-warm-100 text-charcoal-700 px-1 rounded border border-warm-200">
+                                {blend.blendCode}
+                              </span>
                               <button
                                 type="button"
-                                onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(blend.blendCode || ''); showToast(`Copied Blend Code: ${blend.blendCode}`); }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(blend.blendCode || '');
+                                  showToast(`Copied Blend Code: ${blend.blendCode}`);
+                                }}
                                 className="p-0.5 hover:bg-warm-200 rounded text-charcoal-500 hover:text-charcoal-800 transition-colors"
                                 title="Copy Blend Code"
                               >
@@ -366,7 +388,26 @@ export const BlendModal: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    {isActive && <span className="text-[10px] bg-brand-700 text-white font-bold px-2 py-0.5 rounded">Active</span>}
+                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                      {isActive && (
+                        <span className="text-[10px] bg-brand-700 text-white font-bold px-2 py-0.5 rounded">
+                          Active
+                        </span>
+                      )}
+                      {isCreator && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBlendToDelete(blend);
+                          }}
+                          className="p-1.5 hover:bg-rose-50 text-charcoal-400 hover:text-rose-600 rounded-lg transition-colors border border-transparent hover:border-rose-200"
+                          title="Delete Blend"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -562,6 +603,23 @@ export const BlendModal: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Confirm Delete Blend Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(blendToDelete)}
+        title={`Delete "${blendToDelete?.name}"?`}
+        message="This will permanently delete this blend, all member associations, and associated records for everyone. This cannot be undone."
+        confirmLabel="Delete Blend"
+        isDestructive={true}
+        onConfirm={async () => {
+          if (!blendToDelete) return;
+          try {
+            await deleteBlend(blendToDelete.id);
+            setBlendToDelete(null);
+          } catch {}
+        }}
+        onCancel={() => setBlendToDelete(null)}
+      />
     </div>
   );
 };

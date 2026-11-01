@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import type { NavigationTab } from '../../types';
 import { BrandWordmark } from '../common/BrandWordmark';
+import { BlendAvatar } from '../common/BlendAvatar';
 import {
   LayoutDashboard,
   Receipt,
@@ -95,9 +96,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             {currentBlend ? (
               <button
                 onClick={openBlendModal}
-                className="flex items-center gap-1.5 h-9 sm:h-10 px-2.5 sm:px-3 rounded-xl bg-warm-100 hover:bg-warm-200/80 border border-warm-200 text-xs sm:text-sm font-bold text-charcoal-800 transition-all shadow-subtle min-w-0 max-w-[120px] sm:max-w-[150px] md:max-w-[170px] lg:max-w-[210px]"
+                className="flex items-center gap-1.5 h-9 sm:h-10 px-2.5 sm:px-3 rounded-xl bg-warm-100 hover:bg-warm-200/80 border border-warm-200 text-xs sm:text-sm font-bold text-charcoal-800 transition-all shadow-subtle min-w-0 max-w-[130px] sm:max-w-[170px] md:max-w-[210px]"
                 title={`Active Blend: ${currentBlend.name} (Click to switch or manage)`}
               >
+                <BlendAvatar name={currentBlend.name} icon={currentBlend.icon} size="sm" className="w-5 h-5 text-[9px] rounded-md shrink-0" />
                 <span className="truncate">{currentBlend.name}</span>
                 <ChevronDown className="w-3.5 h-3.5 text-charcoal-500 shrink-0" />
               </button>
