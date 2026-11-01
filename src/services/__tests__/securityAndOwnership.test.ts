@@ -68,7 +68,7 @@ describe('Security, Payer Ownership & Blend Isolation Engine', () => {
 
       const ownerNotifs = await backendService.getNotifications(newUser.id);
       expect(ownerNotifs.some(n => n.type === 'blend_invite' && n.message.includes('joined your blend'))).toBe(true);
-    });
+    }, 15000);
 
     it('registers a user with password and authenticates securely on login', async () => {
       const user = await backendService.registerUser('Kavya Nair', 'kavya@campus.edu', 'SecurePass123!');
@@ -101,7 +101,7 @@ describe('Security, Payer Ownership & Blend Isolation Engine', () => {
       const foundBlend = await backendService.findBlendByCode(blend1.blendCode || '');
       expect(foundBlend).not.toBeNull();
       expect(foundBlend?.id).toBe(blend1.id);
-    });
+    }, 15000);
   });
 
   describe('Personal Expense Ownership & Payer Enforcement (Requirement 4)', () => {

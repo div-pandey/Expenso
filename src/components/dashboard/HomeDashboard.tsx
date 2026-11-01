@@ -15,6 +15,7 @@ import {
   Copy,
   Check,
   UserPlus,
+  Share2,
 } from 'lucide-react';
 
 export const HomeDashboard: React.FC = () => {
@@ -37,6 +38,7 @@ export const HomeDashboard: React.FC = () => {
   } = useApp();
 
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedBlendCode, setCopiedBlendCode] = useState(false);
   const greeting = getTimeOfDayGreeting();
   const netPaise = currentUserBalance.netBalancePaise;
 
@@ -48,6 +50,14 @@ export const HomeDashboard: React.FC = () => {
     setCopiedCode(true);
     showToast(`Copied personal invite code: ${currentUser.inviteCode}`);
     setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const copyBlendCode = () => {
+    if (!currentBlend?.blendCode) return;
+    navigator.clipboard.writeText(currentBlend.blendCode);
+    setCopiedBlendCode(true);
+    showToast(`Copied blend code: ${currentBlend.blendCode}`);
+    setTimeout(() => setCopiedBlendCode(false), 2000);
   };
 
   const recentExpenses = expenses.slice(0, 5);
@@ -109,7 +119,40 @@ export const HomeDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Quick Invite Code Banner */}
+      {/* Blend Code Banner — shown only when user is in a blend */}
+      {currentBlend?.blendCode && (
+        <div className="bg-white border border-brand-200 rounded-3xl p-5 sm:p-6 shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-brand-100 text-brand-700 flex items-center justify-center shrink-0 shadow-subtle">
+              <Share2 className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="text-sm font-bold text-charcoal-800">
+                  Blend Code:
+                </span>
+                <span className="font-mono text-base font-black text-brand-900 tracking-widest bg-brand-50 px-3 py-1 rounded-xl border border-brand-200/80">
+                  {currentBlend.blendCode}
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-charcoal-500">
+                This is your blend code — share it with friends so they can join your blend.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
+            <button
+              onClick={copyBlendCode}
+              className="btn-action-secondary group flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 bg-brand-50 hover:bg-brand-100 text-brand-800 rounded-xl text-xs sm:text-sm font-bold border border-brand-200 transition-all"
+            >
+              {copiedBlendCode ? <Check className="w-4 h-4 text-emerald-600 animate-pop-in" /> : <Copy className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />}
+              <span>{copiedBlendCode ? 'Copied!' : 'Copy Blend Code'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Personal Invite Code Banner */}
       <div className="bg-white border border-warm-200 rounded-3xl p-5 sm:p-6 shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-700 flex items-center justify-center shrink-0 shadow-subtle">
@@ -125,7 +168,7 @@ export const HomeDashboard: React.FC = () => {
               </span>
             </div>
             <p className="text-xs sm:text-sm text-charcoal-500">
-              Friends can enter this code in Expenso to connect and commute together.
+              This is your personal code — share it with a friend so when they create a blend, they can add you directly.
             </p>
           </div>
         </div>
