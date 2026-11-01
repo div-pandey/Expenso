@@ -484,6 +484,7 @@ export const backendService = {
             }
           }
 
+          const rawData = data as Record<string, unknown>;
           const cloudBlend: Blend = {
             id: data.id,
             name: data.name,
@@ -491,6 +492,7 @@ export const backendService = {
             createdAt: data.created_at,
             blendCode: data.blend_code || cleanCode,
             memberCount: membersList.length || data.blend_members?.length || 1,
+            icon: (typeof rawData.icon === 'string' ? rawData.icon : undefined) || (localBlend as Blend | null)?.icon,
           };
           sandboxBackend.addBlend(cloudBlend, membersList.length > 0 ? membersList : undefined);
           return cloudBlend;
@@ -591,6 +593,8 @@ export const backendService = {
 
           if (!bErr && blendsData && blendsData.length > 0) {
             for (const b of blendsData) {
+              const local = localBlends.find(l => l.id === b.id);
+              const rawB = b as Record<string, unknown>;
               const cb: Blend = {
                 id: b.id,
                 name: b.name,
@@ -598,6 +602,7 @@ export const backendService = {
                 createdAt: b.created_at,
                 memberCount: b.blend_members?.[0]?.count || 1,
                 blendCode: b.blend_code,
+                icon: (typeof rawB.icon === 'string' ? rawB.icon : undefined) || local?.icon,
               };
               sandboxBackend.addBlend(cb);
               blendsMap.set(cb.id, cb);
@@ -1009,7 +1014,7 @@ export const backendService = {
         if (updates.icon !== undefined) payload.icon = updates.icon.trim() || null;
 
         const { error } = await supabase.from('blends').update(payload).eq('id', blendId);
-        if (error && error.code === '42703' && updates.icon !== undefined) {
+        if (error && updates.icon !== undefined) {
           if (updates.name !== undefined) {
             await supabase.from('blends').update({ name: updates.name.trim() }).eq('id', blendId);
           }
@@ -1020,10 +1025,16 @@ export const backendService = {
     }
 
     if (internalChannel) {
-      try { internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId } }); } catch {}
+      try {
+        internalChannel.postMessage({ type: 'BLEND_SYNC', payload: { blend: updated } });
+        internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId } });
+      } catch {}
     }
     if (realtimeChannel) {
-      try { realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId } }); } catch {}
+      try {
+        realtimeChannel.send({ type: 'broadcast', event: 'BLEND_SYNC', payload: { blend: updated } });
+        realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId } });
+      } catch {}
     }
 
     return updated;

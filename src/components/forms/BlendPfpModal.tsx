@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Camera, Upload, Trash2, Check, Loader2 } from 'lucide-react';
 import { compressImageToDataUrl } from '../../utils/image';
 import { BlendAvatar } from '../common/BlendAvatar';
@@ -29,6 +29,13 @@ export const BlendPfpModal: React.FC<BlendPfpModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedIcon(currentIcon);
+      setError('');
+    }
+  }, [isOpen, currentIcon]);
 
   if (!isOpen) return null;
 

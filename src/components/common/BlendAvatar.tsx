@@ -13,6 +13,12 @@ export const BlendAvatar: React.FC<BlendAvatarProps> = ({
   size = 'md',
   className = '',
 }) => {
+  const [imageError, setImageError] = React.useState(false);
+
+  React.useEffect(() => {
+    setImageError(false);
+  }, [icon]);
+
   const sizeClasses = {
     sm: 'w-7 h-7 rounded-lg',
     md: 'w-9 h-9 rounded-xl',
@@ -27,12 +33,13 @@ export const BlendAvatar: React.FC<BlendAvatarProps> = ({
     xl: 'text-xl font-black',
   }[size];
 
-  if (icon) {
+  if (icon && !imageError) {
     if (icon.startsWith('data:image') || icon.startsWith('http://') || icon.startsWith('https://')) {
       return (
         <img
           src={icon}
           alt={name}
+          onError={() => setImageError(true)}
           className={`${sizeClasses} object-cover shadow-subtle shrink-0 border border-warm-200 ${className}`}
         />
       );

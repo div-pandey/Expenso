@@ -44,6 +44,7 @@ CREATE TABLE public.blends (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   blend_code VARCHAR(6) NOT NULL UNIQUE,
+  icon TEXT,
   created_by TEXT NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())

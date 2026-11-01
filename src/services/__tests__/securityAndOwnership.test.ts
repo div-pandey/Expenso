@@ -313,6 +313,18 @@ describe('Security, Payer Ownership & Blend Isolation Engine', () => {
       });
       expect(updated.name).toBe('VIP Metro Club');
       expect(updated.icon).toBe('🚇');
+
+      // Admin updates with custom gallery photo data URL
+      const mockGalleryPhoto = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/sampleDataUrl';
+      const photoUpdated = await backendService.updateBlendDetails(testBlend.id, {
+        icon: mockGalleryPhoto,
+      });
+      expect(photoUpdated.icon).toBe(mockGalleryPhoto);
+
+      // Verify getUserBlends retains the uploaded photo pfp
+      const userBlends = await backendService.getUserBlends('user_you');
+      const retrieved = userBlends.find(b => b.id === testBlend.id);
+      expect(retrieved?.icon).toBe(mockGalleryPhoto);
     }, 30000);
 
     it('allows Admin to add new member by personal invite code and notifies the friend', async () => {

@@ -5,52 +5,48 @@
 
 export async function compressImageToDataUrl(file: File, maxSize = 160): Promise<string> {
   return new Promise((resolve, reject) => {
-    if (!file.type.startsWith('image/')) {
+    const isImageMime = file.type.startsWith('image/');
+    const isImageExt = /\.(jpe?g|png|webp|gif|bmp|heic|svg)$/i.test(file.name);
+    if (!isImageMime && !isImageExt) {
       reject(new Error('Selected file is not an image'));
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      reject(new Error('Image file is too large (max 5MB).'));
+    if (file.size > 50 * 1024 * 1024) {
+      reject(new Error('Image file is too large (max 50MB).'));
       return;
     }
 
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Failed to read image file'));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('Failed to parse image'));
-      img.onload = () => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Failed to parse image. Please select a JPG, PNG, or WebP photo.'));
+    };
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      try {
         const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > maxSize) {
-            height = Math.round((height * maxSize) / width);
-            width = maxSize;
-          }
-        } else {
-          if (height > maxSize) {
-            width = Math.round((width * maxSize) / height);
-            height = maxSize;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = maxSize;
+        canvas.height = maxSize;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
           reject(new Error('Canvas context not available'));
           return;
         }
 
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
-      };
-      img.src = reader.result as string;
+        // Center-crop to square
+        const side = Math.min(img.width, img.height);
+        const sx = (img.width - side) / 2;
+        const sy = (img.height - side) / 2;
+
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, maxSize, maxSize);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      } catch {
+        reject(new Error('Failed to process image on canvas'));
+      }
     };
-    reader.readAsDataURL(file);
+    img.src = objectUrl;
   });
 }
 

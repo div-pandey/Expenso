@@ -461,7 +461,11 @@ class SandboxBackendService {
     this.syncFromStorage();
     const idx = this.db.blends.findIndex(b => b.id === blend.id || (blend.blendCode && b.blendCode === blend.blendCode));
     if (idx >= 0) {
-      this.db.blends[idx] = { ...this.db.blends[idx], ...blend };
+      this.db.blends[idx] = {
+        ...this.db.blends[idx],
+        ...blend,
+        icon: blend.icon !== undefined ? blend.icon : this.db.blends[idx].icon,
+      };
     } else {
       this.db.blends.push(blend);
     }
