@@ -78,7 +78,7 @@ interface AppContextType {
   // Multi-user & Blend actions
   switchAccount: (userId: string) => Promise<void>;
   switchBlend: (blendId: string) => Promise<void>;
-  createBlend: (name: string, friendInviteCode?: string) => Promise<void>;
+  createBlend: (name: string, friendInviteCodes?: string[]) => Promise<void>;
   joinBlendWithFriendCode: (friendInviteCode: string) => Promise<void>;
   updateBlendName: (name: string) => Promise<void>;
   validateInviteCode: (code: string) => Promise<{ valid: boolean; name?: string; isBlend?: boolean; error?: string }>;
@@ -422,9 +422,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Switched Blend');
   }, [reloadData, showToast]);
 
-  const createBlend = useCallback(async (name: string, friendInviteCode?: string) => {
+  const createBlend = useCallback(async (name: string, friendInviteCodes?: string[]) => {
     try {
-      const newBlend = await backendService.createBlend(name, friendInviteCode);
+      const newBlend = await backendService.createBlend(name, friendInviteCodes);
       if (typeof window !== 'undefined') {
         localStorage.setItem(ACTIVE_BLEND_STORAGE_KEY, newBlend.id);
       }

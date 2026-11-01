@@ -80,6 +80,44 @@ export const HomeDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-fade-in pb-16">
+      {/* No-blend empty state */}
+      {!currentBlend ? (
+        <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-6 py-12">
+          <div className="w-20 h-20 rounded-3xl bg-warm-100 flex items-center justify-center mb-6 shadow-subtle">
+            <Users className="w-10 h-10 text-charcoal-400" />
+          </div>
+          <h2 className="text-2xl font-black text-charcoal-800 mb-3">
+            You're not in any blend
+          </h2>
+          <p className="text-sm text-charcoal-500 max-w-sm leading-relaxed mb-8">
+            Create your first blend now and start calculating expenses with your friends, or share your personal code so that they can add you to their blend.
+          </p>
+          <button
+            onClick={openBlendModal}
+            className="flex items-center gap-2 px-6 py-3 bg-brand-700 hover:bg-brand-800 text-white font-bold rounded-2xl shadow-card transition-all text-sm mb-4"
+          >
+            <Plus className="w-4 h-4" />
+            Create Your First Blend
+          </button>
+          <p className="text-xs text-charcoal-400 mb-2">— or —</p>
+          <p className="text-xs text-charcoal-500 mb-1">
+            Share your personal code with a friend so they can add you to their blend:
+          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="font-mono text-base font-black text-brand-900 tracking-widest bg-brand-50 px-4 py-2 rounded-xl border border-brand-200">
+              {currentUser.inviteCode}
+            </span>
+            <button
+              onClick={copyMyCode}
+              className="flex items-center gap-1.5 px-3 py-2 bg-warm-100 hover:bg-warm-200 text-charcoal-700 text-xs font-bold rounded-xl border border-warm-200 transition-all"
+            >
+              {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedCode ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Greeting and Header Info */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
         <div className="space-y-1">
@@ -446,6 +484,8 @@ export const HomeDashboard: React.FC = () => {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 };

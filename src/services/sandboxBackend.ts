@@ -380,29 +380,6 @@ class SandboxBackendService {
         existing.passwordHash = passwordHash;
       }
       this.setActiveUserId(existing.id);
-      // Ensure user has at least one starter Blend
-      const existingBlends = this.getUserBlends(existing.id);
-      if (existingBlends.length === 0) {
-        let blendCode = generateInviteCode();
-        while (this.db.blends.some(b => b.blendCode === blendCode)) {
-          blendCode = generateInviteCode();
-        }
-        const starterBlend: Blend = {
-          id: generateUUID(),
-          name: `${existing.fullName}'s Commute Blend`,
-          createdBy: existing.id,
-          createdAt: new Date().toISOString(),
-          memberCount: 1,
-          blendCode,
-        };
-        this.db.blends.push(starterBlend);
-        this.db.blendMembers.push({
-          blendId: starterBlend.id,
-          userId: existing.id,
-          role: 'admin',
-          joinedAt: new Date().toISOString(),
-        });
-      }
       this.saveDB();
       return existing;
     }
@@ -444,27 +421,6 @@ class SandboxBackendService {
 
     this.db.users.push(newUser);
     this.setActiveUserId(newUser.id);
-
-    // Create a starter Commute Blend for the newly registered user with unique 6-character Blend Code
-    let starterBlendCode = generateInviteCode();
-    while (!starterBlendCode || starterBlendCode.length !== 6 || this.db.blends.some(b => b.blendCode === starterBlendCode)) {
-      starterBlendCode = generateInviteCode();
-    }
-    const starterBlend: Blend = {
-      id: generateUUID(),
-      name: `${fullName.trim()}'s Commute Blend`,
-      createdBy: newUser.id,
-      createdAt: new Date().toISOString(),
-      memberCount: 1,
-      blendCode: starterBlendCode,
-    };
-    this.db.blends.push(starterBlend);
-    this.db.blendMembers.push({
-      blendId: starterBlend.id,
-      userId: newUser.id,
-      role: 'admin',
-      joinedAt: new Date().toISOString(),
-    });
 
     this.saveDB();
     return newUser;
@@ -602,7 +558,7 @@ class SandboxBackendService {
       .filter((bm): bm is BlendMember => bm !== null);
   }
 
-  public createBlend(name: string, friendInviteCode?: string): Blend {
+  public createBlend(name: string, friendInviteCodes?: string[]): Blend {
     const currentUser = this.getCurrentUser();
     let code = generateInviteCode();
     while (!code || code.length !== 6 || this.db.blends.some(b => b.blendCode === code)) {
@@ -627,17 +583,39 @@ class SandboxBackendService {
       joinedAt: new Date().toISOString(),
     });
 
-    // If friend's invite code provided, connect friend immediately
-    if (friendInviteCode) {
-      const friend = this.findUserByInviteCode(friendInviteCode);
-      if (friend && friend.id !== currentUser.id) {
-        this.db.blendMembers.push({
-          blendId: newBlend.id,
-          userId: friend.id,
-          role: 'member',
-          joinedAt: new Date().toISOString(),
-        });
-        newBlend.memberCount = 2;
+    // If friend invite codes provided, connect each friend immediately
+    if (friendInviteCodes && friendInviteCodes.length > 0) {
+      for (const friendCode of friendInviteCodes) {
+        const friend = this.findUserByInviteCode(friendCode);
+        if (friend && friend.id !== currentUser.id) {
+          const alreadyMember = this.db.blendMembers.some(
+            bm => bm.blendId === newBlend.id && bm.userId === friend.id
+          );
+          if (!alreadyMember) {
+            this.db.blendMembers.push({
+              blendId: newBlend.id,
+              userId: friend.id,
+              role: 'member',
+              joinedAt: new Date().toISOString(),
+            });
+            newBlend.memberCount = (newBlend.memberCount || 1) + 1;
+
+            // In-app notification for friend
+            const friendNotif: InAppNotification = {
+              id: generateUUID(),
+              userId: friend.id,
+              blendId: newBlend.id,
+              type: 'blend_invite',
+              title: 'Added to a Blend',
+              message: `${currentUser.fullName} added you to their blend "${newBlend.name}".`,
+              actorId: currentUser.id,
+              isRead: false,
+              isHandled: false,
+              createdAt: new Date().toISOString(),
+            };
+            this.addNotification(friendNotif);
+          }
+        }
       }
     }
 
@@ -698,7 +676,7 @@ class SandboxBackendService {
         targetBlend = {
           id: generateUUID(),
           name: `${friend.fullName} & ${currentUser.fullName} Blend`,
-          createdBy: currentUser.id,
+          createdBy: friend.id,
           createdAt: new Date().toISOString(),
           memberCount: 2,
           blendCode: newBlendCode,

@@ -92,7 +92,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             </div>
 
             {/* Active Blend Selector Pill */}
-            {currentBlend && (
+            {currentBlend ? (
               <button
                 onClick={openBlendModal}
                 className="flex items-center gap-1.5 h-9 sm:h-10 px-2.5 sm:px-3 rounded-xl bg-warm-100 hover:bg-warm-200/80 border border-warm-200 text-xs sm:text-sm font-bold text-charcoal-800 transition-all shadow-subtle min-w-0 max-w-[120px] sm:max-w-[150px] md:max-w-[170px] lg:max-w-[210px]"
@@ -100,6 +100,15 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               >
                 <span className="truncate">{currentBlend.name}</span>
                 <ChevronDown className="w-3.5 h-3.5 text-charcoal-500 shrink-0" />
+              </button>
+            ) : (
+              <button
+                onClick={openBlendModal}
+                className="flex items-center gap-1.5 h-9 sm:h-10 px-2.5 sm:px-3 rounded-xl bg-brand-50 hover:bg-brand-100/80 border border-brand-200 text-xs sm:text-sm font-bold text-brand-800 transition-all shadow-subtle"
+                title="Create or join a blend"
+              >
+                <Plus className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Join / Create Blend</span>
               </button>
             )}
           </div>

@@ -102,6 +102,39 @@ describe('Security, Payer Ownership & Blend Isolation Engine', () => {
       expect(foundBlend).not.toBeNull();
       expect(foundBlend?.id).toBe(blend1.id);
     }, 15000);
+
+    it('does not create any default starter blend on new user registration', async () => {
+      const freshUser = await backendService.registerUser('Rohan Verma', 'rohan@campus.edu');
+      const blends = sandboxBackend.getUserBlends(freshUser.id);
+      expect(blends.length).toBe(0);
+    });
+
+    it('creates a blend with multiple friends using their personal invite codes and notifies each', async () => {
+      const friendA = await backendService.registerUser('Aditi Rao', 'aditi@campus.edu');
+      const friendB = await backendService.registerUser('Bhavin Shah', 'bhavin@campus.edu');
+
+      sandboxBackend.switchActiveUser('user_you');
+      const multiBlend = await backendService.createBlend('Triple Threat Commute', [
+        friendA.inviteCode,
+        friendB.inviteCode,
+      ]);
+
+      expect(multiBlend).toBeDefined();
+      expect(multiBlend.memberCount).toBe(3);
+
+      const members = await backendService.getBlendMembers(multiBlend.id);
+      expect(members.length).toBe(3);
+      expect(members.some(m => m.userId === 'user_you')).toBe(true);
+      expect(members.some(m => m.userId === friendA.id)).toBe(true);
+      expect(members.some(m => m.userId === friendB.id)).toBe(true);
+
+      // Verify in-app notifications delivered to both friends
+      const notifsA = await backendService.getNotifications(friendA.id);
+      expect(notifsA.some(n => n.type === 'blend_invite' && n.blendId === multiBlend.id)).toBe(true);
+
+      const notifsB = await backendService.getNotifications(friendB.id);
+      expect(notifsB.some(n => n.type === 'blend_invite' && n.blendId === multiBlend.id)).toBe(true);
+    }, 15000);
   });
 
   describe('Personal Expense Ownership & Payer Enforcement (Requirement 4)', () => {

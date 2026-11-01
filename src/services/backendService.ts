@@ -651,14 +651,17 @@ export const backendService = {
     return sandboxBackend.getBlendMembers(blendId);
   },
 
-  async createBlend(name: string, friendInviteCode?: string): Promise<Blend> {
-    const cleanFriendCode = friendInviteCode ? normalizeInviteCode(friendInviteCode) : undefined;
-    if (cleanFriendCode) {
-      // Ensure friend is loaded into cache
-      await this.findUserByInviteCode(cleanFriendCode);
+  async createBlend(name: string, friendInviteCodes?: string[]): Promise<Blend> {
+    const cleanFriendCodes = friendInviteCodes
+      ? friendInviteCodes.map(c => normalizeInviteCode(c)).filter(Boolean)
+      : [];
+
+    // Warm cache for all friend codes
+    for (const code of cleanFriendCodes) {
+      await this.findUserByInviteCode(code);
     }
 
-    const newBlend = sandboxBackend.createBlend(name, cleanFriendCode);
+    const newBlend = sandboxBackend.createBlend(name, cleanFriendCodes.length > 0 ? cleanFriendCodes : undefined);
     const currentUser = sandboxBackend.getCurrentUser();
 
     // Await cloud sync to Supabase profiles, blends, and blend_members so it's guaranteed present
@@ -691,9 +694,9 @@ export const backendService = {
           role: 'admin',
         }, { onConflict: 'blend_id,user_id' });
 
-        // 4. If friend code provided, add friend to members in cloud
-        if (cleanFriendCode) {
-          const friend = await this.findUserByInviteCode(cleanFriendCode);
+        // 4. For each friend code, add friend to members in cloud and send notification
+        for (const code of cleanFriendCodes) {
+          const friend = await this.findUserByInviteCode(code);
           if (friend && friend.id !== newBlend.createdBy) {
             await supabase.from('profiles').upsert({
               id: friend.id,
@@ -710,6 +713,27 @@ export const backendService = {
               user_id: friend.id,
               role: 'member',
             }, { onConflict: 'blend_id,user_id' });
+
+            // Sync friend's in-app notification to Supabase
+            const friendNotifs = sandboxBackend.getNotifications(friend.id);
+            const friendNotif = friendNotifs.find(n => n.blendId === newBlend.id && n.type === 'blend_invite');
+
+            if (supabase && friendNotif) {
+              try {
+                await supabase.from('in_app_notifications').upsert({
+                  id: friendNotif.id,
+                  user_id: friendNotif.userId,
+                  blend_id: friendNotif.blendId,
+                  type: friendNotif.type,
+                  title: friendNotif.title,
+                  message: friendNotif.message,
+                  actor_id: friendNotif.actorId,
+                  is_read: friendNotif.isRead,
+                  is_handled: friendNotif.isHandled,
+                  created_at: friendNotif.createdAt,
+                }, { onConflict: 'id' });
+              } catch {}
+            }
           }
         }
       } catch (err) {
@@ -775,7 +799,7 @@ export const backendService = {
 
     // 3. Resolve blend owner for notifications & cloud persistence
     const blendOwnerId = result.blend.createdBy;
-    const blendOwner = (await this.findUserById(blendOwnerId)) || result.friend || null;
+    const blendOwner = (blendOwnerId !== currentUser.id ? await this.findUserById(blendOwnerId) : null) || result.friend || null;
     const now = new Date().toISOString();
     const ownerName = blendOwner?.fullName || 'friend';
 
