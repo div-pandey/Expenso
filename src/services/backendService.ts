@@ -53,6 +53,18 @@ if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
       } else if (type === 'BLEND_SYNC' && payload?.blend) {
         sandboxBackend.addBlend(payload.blend, payload.members);
         notifySyncListeners({ type: 'BLEND_SYNC', payload });
+      } else if (type === 'EXPENSE_SYNC' && payload?.expense) {
+        sandboxBackend.addExpense(payload.expense);
+        notifySyncListeners({ type: 'RELOAD_DATA', payload });
+      } else if (type === 'EXPENSE_DELETED' && payload?.expenseId) {
+        sandboxBackend.deleteExpenseLocally(payload.expenseId);
+        notifySyncListeners({ type: 'RELOAD_DATA', payload });
+      } else if (type === 'SETTLEMENT_SYNC' && payload?.settlement) {
+        sandboxBackend.addSettlement(payload.settlement);
+        notifySyncListeners({ type: 'RELOAD_DATA', payload });
+      } else if (type === 'SETTLEMENT_DELETED' && payload?.settlementId) {
+        sandboxBackend.deleteSettlementLocally(payload.settlementId);
+        notifySyncListeners({ type: 'RELOAD_DATA', payload });
       } else if (type === 'NOTIFICATION_SYNC' && payload?.notification) {
         sandboxBackend.addNotification(payload.notification);
         notifySyncListeners({ type: 'NOTIFICATION_SYNC', payload });
@@ -86,6 +98,30 @@ if (isSupabaseConfigured && supabase) {
         if (payload?.blend) {
           sandboxBackend.addBlend(payload.blend, payload.members);
           notifySyncListeners({ type: 'BLEND_SYNC', payload });
+        }
+      })
+      .on('broadcast', { event: 'EXPENSE_SYNC' }, ({ payload }) => {
+        if (payload?.expense) {
+          sandboxBackend.addExpense(payload.expense);
+          notifySyncListeners({ type: 'RELOAD_DATA', payload });
+        }
+      })
+      .on('broadcast', { event: 'EXPENSE_DELETED' }, ({ payload }) => {
+        if (payload?.expenseId) {
+          sandboxBackend.deleteExpenseLocally(payload.expenseId);
+          notifySyncListeners({ type: 'RELOAD_DATA', payload });
+        }
+      })
+      .on('broadcast', { event: 'SETTLEMENT_SYNC' }, ({ payload }) => {
+        if (payload?.settlement) {
+          sandboxBackend.addSettlement(payload.settlement);
+          notifySyncListeners({ type: 'RELOAD_DATA', payload });
+        }
+      })
+      .on('broadcast', { event: 'SETTLEMENT_DELETED' }, ({ payload }) => {
+        if (payload?.settlementId) {
+          sandboxBackend.deleteSettlementLocally(payload.settlementId);
+          notifySyncListeners({ type: 'RELOAD_DATA', payload });
         }
       })
       .on('broadcast', { event: 'NOTIFICATION_SYNC' }, ({ payload }) => {
@@ -1170,22 +1206,23 @@ export const backendService = {
 
   // Expenses with Payer Enforcement
   async getBlendExpenses(blendId: string): Promise<Expense[]> {
-    if (isSupabaseConfigured && supabase && (await this.hasCloudAuthSession())) {
+    if (isSupabaseConfigured && supabase) {
       try {
         const { data, error } = await supabase
           .from('expenses')
           .select('*, expense_splits(*)')
           .eq('blend_id', blendId)
           .order('date', { ascending: false });
-        if (!error && data) {
-          return data.map(exp => {
+
+        if (!error && data && Array.isArray(data)) {
+          for (const exp of data) {
             const shares: Record<string, number> = {};
             const participantIds: string[] = [];
             for (const s of exp.expense_splits || []) {
               shares[s.user_id] = Number(s.share_paise);
               participantIds.push(s.user_id);
             }
-            return {
+            const mappedExp: Expense = {
               id: exp.id,
               blendId: exp.blend_id,
               createdBy: exp.created_by,
@@ -1196,11 +1233,12 @@ export const backendService = {
               participantIds,
               shares,
               date: exp.date,
-              notes: exp.notes,
+              notes: exp.notes || undefined,
               createdAt: exp.created_at,
               updatedAt: exp.updated_at,
             };
-          });
+            sandboxBackend.addExpense(mappedExp);
+          }
         }
       } catch (err) {
         console.warn('Supabase getBlendExpenses fallback to sandbox:', err);
@@ -1221,68 +1259,85 @@ export const backendService = {
       forgedPayerId?: string;
     }
   ): Promise<Expense> {
+    const expense = sandboxBackend.createExpense(blendId, data);
+    const currentUser = sandboxBackend.getCurrentUser();
+
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // CRITICAL: Payer is strictly assigned to authenticated user
-          const payerId = user.id;
+        // Ensure creator & all participants exist in profiles table
+        await supabase.from('profiles').upsert({
+          id: currentUser.id,
+          email: currentUser.email,
+          full_name: currentUser.fullName,
+          initials: currentUser.initials,
+          avatar_color: currentUser.avatarColor,
+          invite_code: currentUser.inviteCode,
+          phone: currentUser.phone || null,
+        }, { onConflict: 'id' });
 
-          const { data: exp, error } = await supabase
-            .from('expenses')
-            .insert({
-              blend_id: blendId,
-              created_by: user.id,
-              payer_id: payerId,
-              amount_paise: data.amountPaise,
-              category: data.category,
-              description: data.description.trim(),
-              date: data.date,
-              notes: data.notes?.trim() || null,
-            })
-            .select()
-            .single();
-          if (error || !exp) throw error;
+        for (const pid of expense.participantIds) {
+          const pUser = sandboxBackend.findUserById(pid);
+          if (pUser) {
+            await supabase.from('profiles').upsert({
+              id: pUser.id,
+              email: pUser.email,
+              full_name: pUser.fullName,
+              initials: pUser.initials,
+              avatar_color: pUser.avatarColor,
+              invite_code: pUser.inviteCode,
+              phone: pUser.phone || null,
+            }, { onConflict: 'id' });
+          }
+        }
 
-          // Insert splits
-          const baseShare = Math.floor(data.amountPaise / data.participantIds.length);
-          const remainder = data.amountPaise % data.participantIds.length;
-          const sortedIds = [...data.participantIds].sort();
+        // Upsert expense
+        const { error: expErr } = await supabase
+          .from('expenses')
+          .upsert({
+            id: expense.id,
+            blend_id: blendId,
+            created_by: expense.createdBy,
+            payer_id: expense.payerId,
+            amount_paise: expense.amountPaise,
+            category: expense.category,
+            description: expense.description,
+            date: expense.date,
+            notes: expense.notes || null,
+            created_at: expense.createdAt,
+            updated_at: expense.updatedAt,
+          }, { onConflict: 'id' });
 
-          const splitsPayload = sortedIds.map((pid, idx) => ({
-            expense_id: exp.id,
-            user_id: pid,
-            share_paise: baseShare + (idx < remainder ? 1 : 0),
+        if (!expErr) {
+          const splitsPayload = Object.entries(expense.shares).map(([uid, share]) => ({
+            expense_id: expense.id,
+            user_id: uid,
+            share_paise: share,
           }));
-
-          await supabase.from('expense_splits').insert(splitsPayload);
-
-          const shares: Record<string, number> = {};
-          splitsPayload.forEach(s => {
-            shares[s.user_id] = s.share_paise;
-          });
-
-          return {
-            id: exp.id,
-            blendId: exp.blend_id,
-            createdBy: exp.created_by,
-            payerId: exp.payer_id,
-            amountPaise: Number(exp.amount_paise),
-            category: exp.category as TransportCategory,
-            description: exp.description,
-            participantIds: data.participantIds,
-            shares,
-            date: exp.date,
-            notes: exp.notes,
-            createdAt: exp.created_at,
-            updatedAt: exp.updated_at,
-          };
+          if (splitsPayload.length > 0) {
+            await supabase.from('expense_splits').upsert(splitsPayload, { onConflict: 'expense_id,user_id' });
+          }
+        } else {
+          console.warn('Supabase expense upsert note:', expErr);
         }
       } catch (err) {
-        console.warn('Supabase addExpense fallback to sandbox:', err);
+        console.warn('Supabase addExpense note:', err);
       }
     }
-    return sandboxBackend.createExpense(blendId, data);
+
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({ type: 'EXPENSE_SYNC', payload: { expense } });
+        internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId } });
+      } catch {}
+    }
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({ type: 'broadcast', event: 'EXPENSE_SYNC', payload: { expense } });
+        realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId } });
+      } catch {}
+    }
+
+    return expense;
   },
 
   async updateExpense(
@@ -1296,9 +1351,11 @@ export const backendService = {
       notes?: string;
     }
   ): Promise<Expense> {
-    if (isSupabaseConfigured && supabase && (await this.hasCloudAuthSession())) {
+    const updated = sandboxBackend.updateExpense(expenseId, data);
+
+    if (isSupabaseConfigured && supabase) {
       try {
-        const { data: exp, error } = await supabase
+        await supabase
           .from('expenses')
           .update({
             amount_paise: data.amountPaise,
@@ -1308,90 +1365,95 @@ export const backendService = {
             notes: data.notes?.trim() || null,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', expenseId)
-          .select()
-          .single();
-        if (!error && exp) {
-          // Re-insert splits
-          await supabase.from('expense_splits').delete().eq('expense_id', expenseId);
-          const baseShare = Math.floor(data.amountPaise / data.participantIds.length);
-          const remainder = data.amountPaise % data.participantIds.length;
-          const sortedIds = [...data.participantIds].sort();
+          .eq('id', expenseId);
 
-          const splitsPayload = sortedIds.map((pid, idx) => ({
-            expense_id: expenseId,
-            user_id: pid,
-            share_paise: baseShare + (idx < remainder ? 1 : 0),
-          }));
-
+        await supabase.from('expense_splits').delete().eq('expense_id', expenseId);
+        const splitsPayload = Object.entries(updated.shares).map(([uid, share]) => ({
+          expense_id: expenseId,
+          user_id: uid,
+          share_paise: share,
+        }));
+        if (splitsPayload.length > 0) {
           await supabase.from('expense_splits').insert(splitsPayload);
-
-          const shares: Record<string, number> = {};
-          splitsPayload.forEach(s => {
-            shares[s.user_id] = s.share_paise;
-          });
-
-          return {
-            id: exp.id,
-            blendId: exp.blend_id,
-            createdBy: exp.created_by,
-            payerId: exp.payer_id,
-            amountPaise: Number(exp.amount_paise),
-            category: exp.category as TransportCategory,
-            description: exp.description,
-            participantIds: data.participantIds,
-            shares,
-            date: exp.date,
-            notes: exp.notes,
-            createdAt: exp.created_at,
-            updatedAt: exp.updated_at,
-          };
         }
       } catch (err) {
-        console.warn('Supabase updateExpense fallback to sandbox:', err);
+        console.warn('Supabase updateExpense sync note:', err);
       }
     }
-    return sandboxBackend.updateExpense(expenseId, data);
+
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({ type: 'EXPENSE_SYNC', payload: { expense: updated } });
+        internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId: updated.blendId } });
+      } catch {}
+    }
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({ type: 'broadcast', event: 'EXPENSE_SYNC', payload: { expense: updated } });
+        realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId: updated.blendId } });
+      } catch {}
+    }
+
+    return updated;
   },
 
   async deleteExpense(expenseId: string): Promise<void> {
-    if (isSupabaseConfigured && supabase && (await this.hasCloudAuthSession())) {
+    const expense = sandboxBackend.getExpenseById(expenseId);
+    const blendId = expense?.blendId;
+    sandboxBackend.deleteExpense(expenseId);
+
+    if (isSupabaseConfigured && supabase) {
       try {
-        const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
-        if (!error) return;
+        await supabase.from('expense_splits').delete().eq('expense_id', expenseId);
+        await supabase.from('expenses').delete().eq('id', expenseId);
       } catch (err) {
-        console.warn('Supabase deleteExpense fallback to sandbox:', err);
+        console.warn('Supabase deleteExpense sync note:', err);
       }
     }
-    sandboxBackend.deleteExpense(expenseId);
+
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({ type: 'EXPENSE_DELETED', payload: { expenseId, blendId } });
+        internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId } });
+      } catch {}
+    }
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({ type: 'broadcast', event: 'EXPENSE_DELETED', payload: { expenseId, blendId } });
+        realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId } });
+      } catch {}
+    }
   },
 
   // Settlements
   async getBlendSettlements(blendId: string): Promise<Settlement[]> {
-    if (isSupabaseConfigured && supabase && (await this.hasCloudAuthSession())) {
+    if (isSupabaseConfigured && supabase) {
       try {
         const { data, error } = await supabase
           .from('settlements')
           .select('*')
           .eq('blend_id', blendId)
           .order('date', { ascending: false });
-        if (!error && data) {
-          return data.map(s => ({
-            id: s.id,
-            blendId: s.blend_id,
-            createdBy: s.created_by,
-            fromMemberId: s.from_user_id,
-            toMemberId: s.to_user_id,
-            amountPaise: Number(s.amount_paise),
-            date: s.date,
-            notes: s.notes,
-            status: (s.status || 'confirmed') as import('../types').SettlementStatus,
-            proofImageUrl: s.proof_image_url,
-            confirmedAt: s.confirmed_at,
-            rejectedAt: s.rejected_at,
-            decisionNotes: s.decision_notes,
-            createdAt: s.created_at,
-          }));
+        if (!error && data && Array.isArray(data)) {
+          for (const s of data) {
+            const mapped: Settlement = {
+              id: s.id,
+              blendId: s.blend_id,
+              createdBy: s.created_by,
+              fromMemberId: s.from_user_id,
+              toMemberId: s.to_user_id,
+              amountPaise: Number(s.amount_paise),
+              date: s.date,
+              notes: s.notes || undefined,
+              status: (s.status || 'confirmed') as import('../types').SettlementStatus,
+              proofImageUrl: s.proof_image_url || undefined,
+              confirmedAt: s.confirmed_at || undefined,
+              rejectedAt: s.rejected_at || undefined,
+              decisionNotes: s.decision_notes || undefined,
+              createdAt: s.created_at,
+            };
+            sandboxBackend.addSettlement(mapped);
+          }
         }
       } catch (err) {
         console.warn('Supabase getBlendSettlements fallback to sandbox:', err);
@@ -1416,43 +1478,58 @@ export const backendService = {
     if (data.amountPaise <= 0) {
       throw new Error('Amount must be greater than zero.');
     }
+
+    const s = sandboxBackend.createSettlement(blendId, data);
+    const currentUser = sandboxBackend.getCurrentUser();
+
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: s, error } = await supabase
-            .from('settlements')
-            .insert({
-              blend_id: blendId,
-              created_by: user.id,
-              from_user_id: data.fromMemberId,
-              to_user_id: data.toMemberId,
-              amount_paise: data.amountPaise,
-              date: data.date,
-              notes: data.notes?.trim() || null,
-            })
-            .select()
-            .single();
-          if (error || !s) throw error;
-
-          return {
-            id: s.id,
-            blendId: s.blend_id,
-            createdBy: s.created_by,
-            fromMemberId: s.from_user_id,
-            toMemberId: s.to_user_id,
-            amountPaise: Number(s.amount_paise),
-            date: s.date,
-            notes: s.notes,
-            status: (s.status || 'confirmed') as import('../types').SettlementStatus,
-            createdAt: s.created_at,
-          };
+        for (const uid of [s.fromMemberId, s.toMemberId]) {
+          const u = sandboxBackend.findUserById(uid);
+          if (u) {
+            await supabase.from('profiles').upsert({
+              id: u.id,
+              email: u.email,
+              full_name: u.fullName,
+              initials: u.initials,
+              avatar_color: u.avatarColor,
+              invite_code: u.inviteCode,
+              phone: u.phone || null,
+            }, { onConflict: 'id' });
+          }
         }
+
+        await supabase.from('settlements').upsert({
+          id: s.id,
+          blend_id: blendId,
+          created_by: currentUser.id,
+          from_user_id: s.fromMemberId,
+          to_user_id: s.toMemberId,
+          amount_paise: s.amountPaise,
+          date: s.date,
+          notes: s.notes || null,
+          status: s.status,
+          created_at: s.createdAt,
+        }, { onConflict: 'id' });
       } catch (err) {
-        console.warn('Supabase createSettlement fallback to sandbox:', err);
+        console.warn('Supabase createSettlement note:', err);
       }
     }
-    return sandboxBackend.createSettlement(blendId, data);
+
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({ type: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId } });
+      } catch {}
+    }
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({ type: 'broadcast', event: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId } });
+      } catch {}
+    }
+
+    return s;
   },
 
   async updateSettlement(
@@ -1464,62 +1541,65 @@ export const backendService = {
       notes?: string;
     }
   ): Promise<Settlement> {
+    const s = sandboxBackend.updateSettlement(settlementId, data);
+
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: s, error } = await supabase
-            .from('settlements')
-            .update({
-              to_user_id: data.toMemberId,
-              amount_paise: data.amountPaise,
-              date: data.date,
-              notes: data.notes?.trim() || null,
-            })
-            .eq('id', settlementId)
-            .eq('created_by', user.id)
-            .select()
-            .single();
-          if (error || !s) throw error || new Error('Failed to update settlement');
-
-          return {
-            id: s.id,
-            blendId: s.blend_id,
-            createdBy: s.created_by,
-            fromMemberId: s.from_user_id,
-            toMemberId: s.to_user_id,
-            amountPaise: Number(s.amount_paise),
-            date: s.date,
-            notes: s.notes,
-            status: (s.status || 'confirmed') as import('../types').SettlementStatus,
-            createdAt: s.created_at,
-          };
-        }
+        await supabase
+          .from('settlements')
+          .update({
+            to_user_id: data.toMemberId,
+            amount_paise: data.amountPaise,
+            date: data.date,
+            notes: data.notes?.trim() || null,
+          })
+          .eq('id', settlementId);
       } catch (err) {
-        console.warn('Supabase updateSettlement fallback to sandbox:', err);
+        console.warn('Supabase updateSettlement note:', err);
       }
     }
-    return sandboxBackend.updateSettlement(settlementId, data);
+
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({ type: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId: s.blendId } });
+      } catch {}
+    }
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({ type: 'broadcast', event: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId: s.blendId } });
+      } catch {}
+    }
+
+    return s;
   },
 
   async deleteSettlement(settlementId: string): Promise<void> {
+    const s = sandboxBackend.getSettlementById(settlementId);
+    const blendId = s?.blendId;
+    sandboxBackend.deleteSettlement(settlementId);
+
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { error } = await supabase
-            .from('settlements')
-            .delete()
-            .eq('id', settlementId)
-            .eq('created_by', user.id);
-          if (error) throw error;
-          return;
-        }
+        await supabase.from('settlements').delete().eq('id', settlementId);
       } catch (err) {
-        console.warn('Supabase deleteSettlement fallback to sandbox:', err);
+        console.warn('Supabase deleteSettlement note:', err);
       }
     }
-    sandboxBackend.deleteSettlement(settlementId);
+
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({ type: 'SETTLEMENT_DELETED', payload: { settlementId, blendId } });
+        internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId } });
+      } catch {}
+    }
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({ type: 'broadcast', event: 'SETTLEMENT_DELETED', payload: { settlementId, blendId } });
+        realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId } });
+      } catch {}
+    }
   },
 
   async initiateSettlement(
@@ -1538,44 +1618,58 @@ export const backendService = {
     if (currentSandboxUser && currentSandboxUser.id === data.toMemberId) {
       throw new Error('Sender and recipient cannot be the same person.');
     }
+
+    const s = sandboxBackend.initiateSettlement(blendId, data);
+    const currentUser = sandboxBackend.getCurrentUser();
+
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: s, error } = await supabase
-            .from('settlements')
-            .insert({
-              blend_id: blendId,
-              created_by: user.id,
-              from_user_id: user.id,
-              to_user_id: data.toMemberId,
-              amount_paise: data.amountPaise,
-              date: data.date || new Date().toISOString(),
-              notes: data.notes?.trim() || null,
-              status: 'pending_payment',
-            })
-            .select()
-            .single();
-          if (error || !s) throw error;
-
-          return {
-            id: s.id,
-            blendId: s.blend_id,
-            createdBy: s.created_by,
-            fromMemberId: s.from_user_id,
-            toMemberId: s.to_user_id,
-            amountPaise: Number(s.amount_paise),
-            date: s.date,
-            notes: s.notes,
-            status: s.status,
-            createdAt: s.created_at,
-          };
+        for (const uid of [s.fromMemberId, s.toMemberId]) {
+          const u = sandboxBackend.findUserById(uid);
+          if (u) {
+            await supabase.from('profiles').upsert({
+              id: u.id,
+              email: u.email,
+              full_name: u.fullName,
+              initials: u.initials,
+              avatar_color: u.avatarColor,
+              invite_code: u.inviteCode,
+              phone: u.phone || null,
+            }, { onConflict: 'id' });
+          }
         }
+
+        await supabase.from('settlements').upsert({
+          id: s.id,
+          blend_id: blendId,
+          created_by: currentUser.id,
+          from_user_id: s.fromMemberId,
+          to_user_id: s.toMemberId,
+          amount_paise: s.amountPaise,
+          date: s.date || new Date().toISOString(),
+          notes: s.notes || null,
+          status: 'pending_payment',
+          created_at: s.createdAt,
+        }, { onConflict: 'id' });
       } catch (err) {
-        console.warn('Supabase initiateSettlement fallback to sandbox:', err);
+        console.warn('Supabase initiateSettlement note:', err);
       }
     }
-    return sandboxBackend.initiateSettlement(blendId, data);
+
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({ type: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId } });
+      } catch {}
+    }
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({ type: 'broadcast', event: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId } });
+      } catch {}
+    }
+
+    return s;
   },
 
   async submitSettlementProof(
@@ -1583,135 +1677,147 @@ export const backendService = {
     proofImageUrl: string,
     notes?: string
   ): Promise<Settlement> {
+    const s = sandboxBackend.submitSettlementProof(settlementId, proofImageUrl, notes);
+
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: s, error } = await supabase
-            .from('settlements')
-            .update({
-              proof_image_url: proofImageUrl,
-              status: 'proof_submitted',
-              notes: notes ? notes.trim() : undefined,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', settlementId)
-            .eq('from_user_id', user.id)
-            .select()
-            .single();
-          if (error || !s) throw error;
-
-          return {
-            id: s.id,
-            blendId: s.blend_id,
-            createdBy: s.created_by,
-            fromMemberId: s.from_user_id,
-            toMemberId: s.to_user_id,
-            amountPaise: Number(s.amount_paise),
-            date: s.date,
-            notes: s.notes,
-            status: s.status,
-            proofImageUrl: s.proof_image_url,
-            createdAt: s.created_at,
-          };
-        }
+        await supabase
+          .from('settlements')
+          .update({
+            proof_image_url: proofImageUrl,
+            status: 'proof_submitted',
+            notes: notes ? notes.trim() : undefined,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', settlementId);
       } catch (err) {
-        console.warn('Supabase submitSettlementProof fallback to sandbox:', err);
+        console.warn('Supabase submitSettlementProof note:', err);
       }
     }
-    return sandboxBackend.submitSettlementProof(settlementId, proofImageUrl, notes);
+
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({ type: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId: s.blendId } });
+      } catch {}
+    }
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({ type: 'broadcast', event: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId: s.blendId } });
+      } catch {}
+    }
+
+    return s;
   },
 
   async confirmSettlement(
     settlementId: string,
     decisionNotes?: string
   ): Promise<Settlement> {
+    const s = sandboxBackend.confirmSettlement(settlementId, decisionNotes);
+
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: s, error } = await supabase
-            .from('settlements')
-            .update({
-              status: 'confirmed',
-              confirmed_at: new Date().toISOString(),
-              decision_notes: decisionNotes?.trim() || null,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', settlementId)
-            .eq('to_user_id', user.id) // Only recipient
-            .select()
-            .single();
-          if (error || !s) throw error;
-
-          return {
-            id: s.id,
-            blendId: s.blend_id,
-            createdBy: s.created_by,
-            fromMemberId: s.from_user_id,
-            toMemberId: s.to_user_id,
-            amountPaise: Number(s.amount_paise),
-            date: s.date,
-            notes: s.notes,
-            status: s.status,
-            proofImageUrl: s.proof_image_url,
-            confirmedAt: s.confirmed_at,
-            createdAt: s.created_at,
-          };
-        }
+        await supabase
+          .from('settlements')
+          .update({
+            status: 'confirmed',
+            confirmed_at: new Date().toISOString(),
+            decision_notes: decisionNotes?.trim() || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', settlementId);
       } catch (err) {
-        console.warn('Supabase confirmSettlement fallback to sandbox:', err);
+        console.warn('Supabase confirmSettlement note:', err);
       }
     }
-    return sandboxBackend.confirmSettlement(settlementId, decisionNotes);
+
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({ type: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId: s.blendId } });
+      } catch {}
+    }
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({ type: 'broadcast', event: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId: s.blendId } });
+      } catch {}
+    }
+
+    return s;
   },
 
   async rejectSettlement(
     settlementId: string,
     reason: string
   ): Promise<Settlement> {
+    const s = sandboxBackend.rejectSettlement(settlementId, reason);
+
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: s, error } = await supabase
-            .from('settlements')
-            .update({
-              status: 'rejected',
-              rejected_at: new Date().toISOString(),
-              decision_notes: reason.trim(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', settlementId)
-            .eq('to_user_id', user.id) // Only recipient
-            .select()
-            .single();
-          if (error || !s) throw error;
-
-          return {
-            id: s.id,
-            blendId: s.blend_id,
-            createdBy: s.created_by,
-            fromMemberId: s.from_user_id,
-            toMemberId: s.to_user_id,
-            amountPaise: Number(s.amount_paise),
-            date: s.date,
-            notes: s.notes,
-            status: s.status,
-            proofImageUrl: s.proof_image_url,
-            rejectedAt: s.rejected_at,
-            createdAt: s.created_at,
-          };
-        }
+        await supabase
+          .from('settlements')
+          .update({
+            status: 'rejected',
+            rejected_at: new Date().toISOString(),
+            decision_notes: reason.trim(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', settlementId);
       } catch (err) {
-        console.warn('Supabase rejectSettlement fallback to sandbox:', err);
+        console.warn('Supabase rejectSettlement note:', err);
       }
     }
-    return sandboxBackend.rejectSettlement(settlementId, reason);
+
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({ type: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId: s.blendId } });
+      } catch {}
+    }
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({ type: 'broadcast', event: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId: s.blendId } });
+      } catch {}
+    }
+
+    return s;
   },
 
   async cancelSettlement(settlementId: string): Promise<Settlement> {
-    return sandboxBackend.cancelSettlement(settlementId);
+    const s = sandboxBackend.cancelSettlement(settlementId);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase
+          .from('settlements')
+          .update({
+            status: 'cancelled',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', settlementId);
+      } catch (err) {
+        console.warn('Supabase cancelSettlement note:', err);
+      }
+    }
+
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({ type: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId: s.blendId } });
+      } catch {}
+    }
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({ type: 'broadcast', event: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId: s.blendId } });
+      } catch {}
+    }
+
+    return s;
   },
 
   async updateUserPaymentMethod(userId: string, paymentMethod: UserPaymentMethod): Promise<void> {

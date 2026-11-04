@@ -294,6 +294,49 @@ describe('Security, Payer Ownership & Blend Isolation Engine', () => {
         });
       }).toThrow(/Access denied: You are not a member of this Blend/);
     });
+
+    it('reflects expenses added by one member to all other members in the Blend', async () => {
+      const satyam = await backendService.registerUser('Satyam Sharma', 'satyam@campus.edu');
+      sandboxBackend.switchActiveUser('user_you');
+
+      const blend = await backendService.createBlend('Commute Pals', [satyam.inviteCode]);
+      expect(blend).toBeDefined();
+
+      // Div adds ₹1,000 metro expense split between Div and Satyam
+      const exp = await backendService.createExpense(blend.id, {
+        amountPaise: 100000,
+        category: 'metro',
+        description: 'Morning Metro Split',
+        participantIds: ['user_you', satyam.id],
+        date: new Date().toISOString(),
+      });
+      expect(exp.payerId).toBe('user_you');
+      expect(exp.shares['user_you']).toBe(50000);
+      expect(exp.shares[satyam.id]).toBe(50000);
+
+      // Switch to Satyam
+      sandboxBackend.switchActiveUser(satyam.id);
+
+      // Satyam fetches blend expenses
+      const satyamViewExpenses = await backendService.getBlendExpenses(blend.id);
+      expect(satyamViewExpenses.length).toBeGreaterThanOrEqual(1);
+      const foundExp = satyamViewExpenses.find(e => e.id === exp.id);
+      expect(foundExp).toBeDefined();
+      expect(foundExp?.amountPaise).toBe(100000);
+      expect(foundExp?.payerId).toBe('user_you');
+
+      // Verify Satyam's net balance reflects owing ₹500
+      const blendMembers = await backendService.getBlendMembers(blend.id);
+      const membersForCalc = blendMembers.map(bm => ({
+        id: bm.userId,
+        name: bm.profile.fullName,
+        initials: bm.profile.initials,
+        avatarColor: bm.profile.avatarColor,
+      }));
+      const balances = calculateMemberBalances(membersForCalc, satyamViewExpenses, []);
+      expect(balances[satyam.id].netBalancePaise).toBe(-50000); // Satyam owes ₹500
+      expect(balances['user_you'].netBalancePaise).toBe(50000); // Div is owed ₹500
+    }, 30000);
   });
 
   describe('Blend Admin Privileges, Membership Management & Custom PFP', () => {

@@ -884,6 +884,50 @@ class SandboxBackendService {
 
   // --- Expenses & Payer Ownership Rule Enforcement ---
 
+  public getExpenseById(expenseId: string): Expense | null {
+    this.syncFromStorage();
+    return this.db.expenses.find(e => e.id === expenseId) || null;
+  }
+
+  public addExpense(expense: Expense): void {
+    this.syncFromStorage();
+    const idx = this.db.expenses.findIndex(e => e.id === expense.id);
+    if (idx >= 0) {
+      this.db.expenses[idx] = { ...this.db.expenses[idx], ...expense };
+    } else {
+      this.db.expenses.unshift(expense);
+    }
+    this.saveDB();
+  }
+
+  public deleteExpenseLocally(expenseId: string): void {
+    this.syncFromStorage();
+    this.db.expenses = this.db.expenses.filter(e => e.id !== expenseId);
+    this.saveDB();
+  }
+
+  public getSettlementById(settlementId: string): Settlement | null {
+    this.syncFromStorage();
+    return this.db.settlements.find(s => s.id === settlementId) || null;
+  }
+
+  public addSettlement(settlement: Settlement): void {
+    this.syncFromStorage();
+    const idx = this.db.settlements.findIndex(s => s.id === settlement.id);
+    if (idx >= 0) {
+      this.db.settlements[idx] = { ...this.db.settlements[idx], ...settlement };
+    } else {
+      this.db.settlements.unshift(settlement);
+    }
+    this.saveDB();
+  }
+
+  public deleteSettlementLocally(settlementId: string): void {
+    this.syncFromStorage();
+    this.db.settlements = this.db.settlements.filter(s => s.id !== settlementId);
+    this.saveDB();
+  }
+
   public getBlendExpenses(blendId: string): Expense[] {
     const currentUser = this.getCurrentUser();
     // Validate membership
