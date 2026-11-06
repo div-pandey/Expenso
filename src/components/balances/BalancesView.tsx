@@ -336,14 +336,23 @@ export const BalancesView: React.FC = () => {
                     <span className="font-bold text-emerald-800 text-sm">
                       {formatCurrency(item.amountPaise)}
                     </span>
-                    {/* View proof button for recipient when proof submitted */}
-                    {isRecipient && item.status === 'proof_submitted' && item.proofImageUrl && (
+                    {/* View proof button for recipient or sender when proof submitted */}
+                    {isRecipient && item.status === 'proof_submitted' && (
                       <button
                         onClick={() => openProofReview(item)}
                         className="text-xs font-bold text-sky-700 hover:text-sky-800 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 transition-all duration-150 hover:-translate-y-0.5 active:scale-95 shadow-subtle"
                         title="Review payment proof"
                       >
                         Review
+                      </button>
+                    )}
+                    {!isRecipient && item.status === 'proof_submitted' && (
+                      <button
+                        onClick={() => openProofReview(item)}
+                        className="text-xs font-semibold text-charcoal-600 hover:text-charcoal-900 px-2 py-1 rounded-lg bg-warm-100 hover:bg-warm-200 border border-warm-200 transition-all"
+                        title="View settlement details"
+                      >
+                        Details
                       </button>
                     )}
                     {item.createdBy === currentUser.id && !['confirmed'].includes(item.status || '') && (

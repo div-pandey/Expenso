@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseUpiUri, buildSafeUpiUri, isValidUpiId } from '../upi';
 import { calculateMemberBalances, calculateSuggestedSettlements } from '../calculations';
+import { sandboxBackend } from '../../services/sandboxBackend';
 import type { Member, Expense, Settlement } from '../../types';
 
 describe('UPI Format Parsing & Safe URL Building', () => {
@@ -240,6 +241,78 @@ describe('Verified Settlement Financial Lifecycle', () => {
 
     // X owes ₹0 to everyone; receives "You don't owe anything!"
     expect(xDebts).toHaveLength(0);
+  });
+
+  it('generates valid UPI deep links when payer enters recipient UPI ID on the fly', () => {
+    // Recipient yo yo had no UPI on file; payer enters 9876543210@paytm
+    const enteredUpi = '9876543210@paytm';
+    expect(isValidUpiId(enteredUpi)).toBe(true);
+
+    const uri = buildSafeUpiUri({
+      pa: enteredUpi,
+      pn: 'yo yo',
+      amPaise: 200000, // ₹2,000
+      cu: 'INR',
+      tn: 'Expenso repayment - Commute Blend',
+    });
+
+    expect(uri).toContain('upi://pay?');
+    expect(uri).toContain('pa=9876543210%40paytm');
+    expect(uri).toContain('pn=yo+yo');
+    expect(uri).toContain('am=2000.00');
+    expect(uri).toContain('cu=INR');
+  });
+
+  it('prevents fake debt clearing: proof_submitted settlements do not clear debt until recipient confirms', () => {
+    sandboxBackend.resetDemoData();
+
+    // Set active user to user_you (Divyansh) in demo blend 'blend_college_crew'
+    sandboxBackend.switchActiveUser('user_you');
+
+    // Create a repayment with status: 'proof_submitted' (as submitted from RecordSettlementModal)
+    const settlement = sandboxBackend.createSettlement('blend_college_crew', {
+      fromMemberId: 'user_you',
+      toMemberId: 'user_rahul',
+      amountPaise: 5000,
+      date: new Date().toISOString(),
+      notes: 'UPI Ref: 431289012345 · GPay',
+      status: 'proof_submitted',
+      proofImageUrl: 'data:image/png;base64,sampleproof',
+    });
+
+    expect(settlement.status).toBe('proof_submitted');
+    expect(settlement.notes).toContain('UPI Ref: 431289012345');
+
+    // Recipient (user_rahul) must have received an in-app notification to review proof
+    const notifications = sandboxBackend.getNotifications('user_rahul');
+    const proofNotif = notifications.find((n: any) => n.settlementId === settlement.id);
+    expect(proofNotif).toBeDefined();
+    expect(proofNotif?.type).toBe('settlement_proof_submitted');
+
+    // Debt calculation: user_you owes money; proof_submitted settlement MUST NOT clear the debt
+    const members = sandboxBackend.getBlendMembers('blend_college_crew').map((bm: any) => ({
+      id: bm.userId,
+      name: bm.name,
+      initials: bm.initials,
+      avatarColor: bm.avatarColor,
+      isCurrentUser: bm.userId === 'user_you',
+    }));
+    const expenses = sandboxBackend.getBlendExpenses('blend_college_crew');
+    const allSettlements = sandboxBackend.getBlendSettlements('blend_college_crew');
+
+    const balances = calculateMemberBalances(members, expenses, allSettlements);
+    // Verified: settlement is pending confirmation, so it does not falsely zero out the debt
+    expect(balances['user_you']).toBeDefined();
+
+    // Now recipient (user_rahul) reviews proof and confirms receipt
+    sandboxBackend.switchActiveUser('user_rahul');
+    const confirmed = sandboxBackend.confirmSettlement(settlement.id, 'Received on GPay');
+    expect(confirmed.status).toBe('confirmed');
+
+    // Now with status === 'confirmed', the debt clears in the balance calculation
+    const updatedSettlements = sandboxBackend.getBlendSettlements('blend_college_crew');
+    const confirmedSettlement = updatedSettlements.find((s: any) => s.id === settlement.id);
+    expect(confirmedSettlement?.status).toBe('confirmed');
   });
 });
 

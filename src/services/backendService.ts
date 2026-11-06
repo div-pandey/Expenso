@@ -10,6 +10,7 @@ import type {
   BlendMember,
   Expense,
   Settlement,
+  SettlementStatus,
   TransportCategory,
   UserPaymentMethod,
   InAppNotification,
@@ -1707,6 +1708,8 @@ export const backendService = {
       amountPaise: number;
       date: string;
       notes?: string;
+      status?: SettlementStatus;
+      proofImageUrl?: string;
     }
   ): Promise<Settlement> {
     if (data.fromMemberId === data.toMemberId) {

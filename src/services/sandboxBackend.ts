@@ -4,6 +4,7 @@ import type {
   BlendMember,
   Expense,
   Settlement,
+  SettlementStatus,
   TransportCategory,
   UserPaymentMethod,
   InAppNotification,
@@ -1135,6 +1136,8 @@ class SandboxBackendService {
       amountPaise: number;
       date: string;
       notes?: string;
+      status?: SettlementStatus;
+      proofImageUrl?: string;
     }
   ): Settlement {
     this.syncFromStorage();
@@ -1162,6 +1165,8 @@ class SandboxBackendService {
       throw new Error('Both members must belong to this Blend.');
     }
 
+    const initialStatus: SettlementStatus = data.status || 'confirmed';
+
     const newSettlement: Settlement = {
       id: generateUUID(),
       blendId,
@@ -1171,11 +1176,54 @@ class SandboxBackendService {
       amountPaise: data.amountPaise,
       date: data.date,
       notes: data.notes?.trim() || undefined,
-      status: (data as any).status || 'confirmed',
+      status: initialStatus,
+      proofImageUrl: data.proofImageUrl || undefined,
       createdAt: new Date().toISOString(),
     };
 
     this.db.settlements.unshift(newSettlement);
+
+    // Create notification for recipient based on status
+    const sender = currentUser;
+    const amountRupees = (newSettlement.amountPaise / 100).toFixed(2);
+
+    if (initialStatus === 'proof_submitted') {
+      const notif: InAppNotification = {
+        id: generateUUID(),
+        userId: newSettlement.toMemberId,
+        blendId: newSettlement.blendId,
+        type: 'settlement_proof_submitted',
+        title: 'Payment Proof Received',
+        message: `${sender.fullName} says they sent you ₹${amountRupees}.`,
+        settlementId: newSettlement.id,
+        amountPaise: newSettlement.amountPaise,
+        actorId: sender.id,
+        proofImageUrl: newSettlement.proofImageUrl,
+        isRead: false,
+        isHandled: false,
+        createdAt: new Date().toISOString(),
+      };
+      if (!this.db.notifications) this.db.notifications = [];
+      this.db.notifications.unshift(notif);
+    } else if (initialStatus === 'confirmed') {
+      const notif: InAppNotification = {
+        id: generateUUID(),
+        userId: newSettlement.toMemberId,
+        blendId: newSettlement.blendId,
+        type: 'settlement_confirmed',
+        title: 'Repayment Recorded',
+        message: `${sender.fullName} recorded a repayment of ₹${amountRupees} to you.`,
+        settlementId: newSettlement.id,
+        amountPaise: newSettlement.amountPaise,
+        actorId: sender.id,
+        isRead: false,
+        isHandled: true,
+        createdAt: new Date().toISOString(),
+      };
+      if (!this.db.notifications) this.db.notifications = [];
+      this.db.notifications.unshift(notif);
+    }
+
     this.saveDB();
     return newSettlement;
   }

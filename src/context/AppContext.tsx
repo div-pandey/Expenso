@@ -6,6 +6,7 @@ import type {
   Member,
   Expense,
   Settlement,
+  SettlementStatus,
   NavigationTab,
   PeriodFilter,
   SuggestedSettlement,
@@ -116,6 +117,8 @@ interface AppContextType {
     amountPaise: number;
     date: string;
     notes?: string;
+    status?: SettlementStatus;
+    proofImageUrl?: string;
   }) => Promise<void>;
   updateSettlement: (
     id: string,
@@ -640,6 +643,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     amountPaise: number;
     date: string;
     notes?: string;
+    status?: SettlementStatus;
+    proofImageUrl?: string;
   }) => {
     if (!currentBlend) return;
     if (data.fromMemberId === data.toMemberId) {
@@ -654,7 +659,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await backendService.createSettlement(currentBlend.id, data);
       setIsRecordSettlementOpen(false);
       setSettlementPreset(null);
-      showToast('Repayment logged');
+      if (data.status === 'proof_submitted') {
+        showToast('Payment submitted! Recipient notified to confirm.');
+      } else {
+        showToast('Repayment logged');
+      }
       await reloadData(currentBlend.id);
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Failed to log repayment', 'error');
