@@ -36,8 +36,11 @@ export interface VerificationResult {
   engineUsed: 'gemini-ai' | 'smart-vision-heuristic';
 }
 
+// Direct Vite environment reference - statically replaced by Vite at compile time
+const envGeminiKey: string = (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
+
 /**
- * Retrieves the Gemini API key from environment variable or localStorage.
+ * Retrieves the Gemini API key from environment variable, define replacement, or localStorage.
  */
 export function getGeminiApiKey(): string {
   if (typeof localStorage !== 'undefined') {
@@ -46,18 +49,32 @@ export function getGeminiApiKey(): string {
       return localKey.trim();
     }
   }
-  const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) || '';
-  if (typeof envKey === 'string' && envKey.trim()) {
-    // Cache to localStorage for instant client retrieval across tabs
+
+  // 1. Check live import.meta.env (allows test stubs)
+  const dynamicEnv = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) as string | undefined;
+  if (typeof dynamicEnv === 'string' && dynamicEnv.trim()) {
     if (typeof localStorage !== 'undefined') {
       try {
-        localStorage.setItem('expenso_gemini_api_key', envKey.trim());
+        localStorage.setItem('expenso_gemini_api_key', dynamicEnv.trim());
       } catch {
         // localStorage full or restricted
       }
     }
-    return envKey.trim();
+    return dynamicEnv.trim();
   }
+
+  // 2. Fall back to compile-time inlined key for browser app runtime
+  if (import.meta.env?.MODE !== 'test' && typeof envGeminiKey === 'string' && envGeminiKey.trim()) {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('expenso_gemini_api_key', envGeminiKey.trim());
+      } catch {
+        // localStorage full or restricted
+      }
+    }
+    return envGeminiKey.trim();
+  }
+
   return '';
 }
 
