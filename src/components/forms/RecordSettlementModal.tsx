@@ -1,7 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatCurrency, parseRupeesToPaise } from '../../utils/currency';
 import { buildSafeUpiUri, isValidUpiId } from '../../utils/upi';
+import {
+  verifyPaymentProofWithGemini,
+  getGeminiApiKey,
+  setGeminiApiKey,
+  type VerificationResult,
+} from '../../services/geminiPaymentVerifier';
 import {
   X,
   Check,
@@ -15,6 +21,8 @@ import {
   Copy,
   Clock,
   Loader2,
+  Upload,
+  XCircle,
 } from 'lucide-react';
 
 export const RecordSettlementModal: React.FC = () => {
@@ -37,6 +45,17 @@ export const RecordSettlementModal: React.FC = () => {
   const [showQrCode, setShowQrCode] = useState<boolean>(false);
   const [copiedUpi, setCopiedUpi] = useState<boolean>(false);
   const [utrNumber, setUtrNumber] = useState<string>('');
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Gemini AI Verification State
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [hasApiKey, setHasApiKey] = useState(() => Boolean(getGeminiApiKey()));
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState(() => getGeminiApiKey());
+
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -132,6 +151,64 @@ export const RecordSettlementModal: React.FC = () => {
     window.location.href = upiDeepLink;
   };
 
+  const verifyProof = async (dataUrl: string) => {
+    setIsVerifying(true);
+    setVerificationResult(null);
+    try {
+      const res = await verifyPaymentProofWithGemini({
+        imageDataUrl: dataUrl,
+        expectedAmountPaise: parsedAmountPaise,
+        recipientName: toMember?.name || 'Friend',
+        recipientUpi: lenderUpiId,
+        expectedUtr: utrNumber.trim() || undefined,
+      });
+      setVerificationResult(res);
+      if (res.isValid) {
+        showToast('Payment screenshot verified by AI!');
+        if (res.detectedUtr && !utrNumber.trim()) {
+          setUtrNumber(res.detectedUtr);
+        }
+      } else {
+        showToast(res.rejectionReason || 'AI verification failed', 'error');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Verification failed';
+      setVerificationResult({
+        isValid: false,
+        confidence: 0,
+        rejectionReason: msg,
+        summary: 'Failed to verify proof',
+        engineUsed: 'smart-vision-heuristic',
+      });
+      showToast(msg, 'error');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { showToast('Screenshot must be under 5MB', 'error'); return; }
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!validTypes.includes(file.type)) { showToast('Upload a PNG, JPG or WebP image', 'error'); return; }
+    setProofFile(file);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      setProofPreview(dataUrl);
+      await verifyProof(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveProof = () => {
+    setProofFile(null);
+    setProofPreview(null);
+    setVerificationResult(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
     if (!parsedAmountPaise || parsedAmountPaise <= 0) {
@@ -161,6 +238,11 @@ export const RecordSettlementModal: React.FC = () => {
     e.preventDefault();
     if (!validate()) return;
 
+    if (proofFile && (!verificationResult || !verificationResult.isValid)) {
+      showToast(verificationResult?.rejectionReason || 'Please upload a verified payment screenshot', 'error');
+      return;
+    }
+
     setSubmitting(true);
     try {
       let finalNotes = `UPI transfer to ${lenderUpiId}`;
@@ -177,6 +259,7 @@ export const RecordSettlementModal: React.FC = () => {
         date: new Date().toISOString(),
         notes: finalNotes,
         status: 'proof_submitted',
+        proofImageUrl: proofPreview || undefined,
       });
     } finally {
       setSubmitting(false);
@@ -502,6 +585,147 @@ export const RecordSettlementModal: React.FC = () => {
             />
           </div>
 
+          {/* PAYMENT PROOF SCREENSHOT (AI VERIFIED) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-[11px] font-semibold text-charcoal-700">
+                Payment Screenshot (Optional)
+              </label>
+              <span className="text-[10px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200 font-bold flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-purple-600" />
+                AI Fraud Check
+              </span>
+            </div>
+
+            {proofPreview ? (
+              <div className="space-y-2">
+                <div className="relative rounded-xl overflow-hidden border border-warm-200">
+                  <img src={proofPreview} alt="Payment proof" className="w-full h-36 object-cover" />
+                  <button
+                    type="button"
+                    onClick={handleRemoveProof}
+                    className="absolute top-2 right-2 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center shadow-subtle hover:bg-white active:scale-90 transition-all text-charcoal-700"
+                    title="Remove screenshot"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* AI Verification Status Card */}
+                {isVerifying && (
+                  <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center gap-2.5 text-xs text-purple-900 animate-pulse">
+                    <Sparkles className="w-4 h-4 text-purple-600 animate-spin shrink-0" />
+                    <div>
+                      <p className="font-bold">Gemini AI Verifying Screenshot...</p>
+                      <p className="text-[10px] text-purple-700">
+                        Cross-checking {parsedAmountPaise > 0 ? formatCurrency(parsedAmountPaise) : 'payment'} amount, transaction status, and authenticity.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {verificationResult && !verificationResult.isValid && !isVerifying && (
+                  <div className="p-3 bg-rose-50 border border-rose-300 rounded-xl space-y-1 text-xs text-rose-900 animate-pop-in">
+                    <div className="flex items-center gap-1.5 font-bold text-rose-700">
+                      <XCircle className="w-4 h-4 shrink-0" />
+                      <span>AI Verification Failed</span>
+                    </div>
+                    <p className="text-[11px] text-rose-800 leading-relaxed font-semibold">
+                      {verificationResult.rejectionReason}
+                    </p>
+                    <p className="text-[10px] text-rose-600">
+                      Please upload an authentic, clear screenshot of the completed payment. Fake, wrong, or uncompleted transaction screenshots cannot be submitted.
+                    </p>
+                  </div>
+                )}
+
+                {verificationResult && verificationResult.isValid && !isVerifying && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl space-y-1 text-xs text-emerald-950 animate-pop-in">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-emerald-800 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        {verificationResult.engineUsed === 'gemini-ai' ? 'Verified by Gemini AI' : 'Verified Payment Screenshot'}
+                      </span>
+                      {verificationResult.detectedApp && (
+                        <span className="text-[10px] font-bold bg-white text-emerald-900 px-2 py-0.5 rounded border border-emerald-200">
+                          {verificationResult.detectedApp}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-emerald-800">
+                      {verificationResult.summary}
+                    </p>
+                    {verificationResult.detectedUtr && (
+                      <p className="text-[10px] font-mono text-emerald-700 font-semibold">
+                        Auto-detected UTR: {verificationResult.detectedUtr}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <label htmlFor="repayment-proof-upload" className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl border-2 border-dashed border-warm-300 hover:border-emerald-400 hover:bg-emerald-50/40 cursor-pointer transition-all duration-200 group">
+                <Upload className="w-5 h-5 text-charcoal-400 group-hover:scale-110 group-hover:text-emerald-700 transition-all duration-200" />
+                <p className="text-xs font-semibold text-charcoal-600 group-hover:text-charcoal-900 transition-colors">
+                  Upload screenshot (PNG, JPG, WebP)
+                </p>
+                <p className="text-[10px] text-charcoal-400">Max 5MB · AI cross-checks amount & UTR</p>
+                <input
+                  ref={fileInputRef}
+                  id="repayment-proof-upload"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="sr-only"
+                  onChange={handleFileChange}
+                />
+              </label>
+            )}
+
+            {/* Optional Gemini API Key Toggle */}
+            <div className="pt-0.5">
+              <button
+                type="button"
+                onClick={() => setShowApiKeyInput(!showApiKeyInput)}
+                className="text-[10px] text-charcoal-400 hover:text-charcoal-600 flex items-center gap-1"
+              >
+                <Sparkles className="w-3 h-3 text-purple-500" />
+                <span>{hasApiKey ? 'Gemini AI Vision Active ✓' : 'Use your free Gemini API Key (optional)'}</span>
+              </button>
+              {showApiKeyInput && (
+                <div className="mt-1.5 p-2 bg-warm-50 border border-warm-200 rounded-lg space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="font-semibold text-charcoal-700">Google Gemini API Key</span>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:underline flex items-center gap-0.5">
+                      Get free key <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="password"
+                      placeholder="Paste Gemini API key"
+                      value={apiKeyInput}
+                      onChange={e => setApiKeyInput(e.target.value)}
+                      className="flex-1 px-2 py-1 text-xs bg-white border border-warm-300 rounded font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGeminiApiKey(apiKeyInput);
+                        setHasApiKey(Boolean(apiKeyInput.trim()));
+                        setShowApiKeyInput(false);
+                        showToast('Gemini API key saved!');
+                        if (proofPreview) verifyProof(proofPreview);
+                      }}
+                      className="px-2.5 py-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs rounded"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Verification notice */}
           <div className="p-2.5 rounded-lg bg-sky-50 border border-sky-200 text-[11px] text-sky-900 flex items-start gap-2">
             <Clock className="w-4 h-4 text-sky-700 shrink-0 mt-0.5" />
@@ -521,13 +745,18 @@ export const RecordSettlementModal: React.FC = () => {
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || isVerifying || (proofFile ? (!verificationResult || !verificationResult.isValid) : false)}
               className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 shadow-card transition-all flex items-center justify-center gap-2"
             >
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Submitting...</span>
+                </>
+              ) : isVerifying ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Verifying Proof...</span>
                 </>
               ) : (
                 <>
