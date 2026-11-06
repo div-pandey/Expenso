@@ -71,6 +71,36 @@ if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
       } else if (type === 'DELETE_BLEND' && payload?.blendId) {
         sandboxBackend.forceDeleteBlend(payload.blendId);
         notifySyncListeners({ type: 'RELOAD_DATA', payload });
+      } else if (type === 'QUERY_BLEND_DATA' && payload?.blendId) {
+        const expenses = sandboxBackend.getAllExpensesForBlend(payload.blendId);
+        const settlements = sandboxBackend.getAllSettlementsForBlend(payload.blendId);
+        if (expenses.length > 0 || settlements.length > 0) {
+          internalChannel?.postMessage({
+            type: 'BLEND_DATA_RESPONSE',
+            payload: { blendId: payload.blendId, expenses, settlements },
+          });
+        }
+      } else if (type === 'BLEND_DATA_RESPONSE' && payload?.blendId) {
+        let changed = false;
+        if (Array.isArray(payload.expenses)) {
+          for (const exp of payload.expenses) {
+            if (!sandboxBackend.getExpenseById(exp.id)) {
+              sandboxBackend.addExpense(exp);
+              changed = true;
+            }
+          }
+        }
+        if (Array.isArray(payload.settlements)) {
+          for (const set of payload.settlements) {
+            if (!sandboxBackend.getSettlementById(set.id)) {
+              sandboxBackend.addSettlement(set);
+              changed = true;
+            }
+          }
+        }
+        if (changed) {
+          notifySyncListeners({ type: 'RELOAD_DATA', payload: { blendId: payload.blendId } });
+        }
       } else if (type === 'RELOAD_DATA') {
         notifySyncListeners({ type: 'RELOAD_DATA', payload });
       }
@@ -153,6 +183,43 @@ if (isSupabaseConfigured && supabase) {
           }
         }
       })
+      .on('broadcast', { event: 'QUERY_BLEND_DATA' }, ({ payload }) => {
+        if (payload?.blendId) {
+          const expenses = sandboxBackend.getAllExpensesForBlend(payload.blendId);
+          const settlements = sandboxBackend.getAllSettlementsForBlend(payload.blendId);
+          if (expenses.length > 0 || settlements.length > 0) {
+            realtimeChannel?.send({
+              type: 'broadcast',
+              event: 'BLEND_DATA_RESPONSE',
+              payload: { blendId: payload.blendId, expenses, settlements },
+            });
+          }
+        }
+      })
+      .on('broadcast', { event: 'BLEND_DATA_RESPONSE' }, ({ payload }) => {
+        if (payload?.blendId) {
+          let changed = false;
+          if (Array.isArray(payload.expenses)) {
+            for (const exp of payload.expenses) {
+              if (!sandboxBackend.getExpenseById(exp.id)) {
+                sandboxBackend.addExpense(exp);
+                changed = true;
+              }
+            }
+          }
+          if (Array.isArray(payload.settlements)) {
+            for (const set of payload.settlements) {
+              if (!sandboxBackend.getSettlementById(set.id)) {
+                sandboxBackend.addSettlement(set);
+                changed = true;
+              }
+            }
+          }
+          if (changed) {
+            notifySyncListeners({ type: 'RELOAD_DATA', payload: { blendId: payload.blendId } });
+          }
+        }
+      })
       .subscribe();
   } catch (e) {
     console.warn('Realtime channel initialization note:', e);
@@ -194,6 +261,27 @@ async function queryPeerCode(code: string): Promise<{ user?: UserProfile; blend?
       }
     });
   });
+}
+
+// Helper to broadcast query to peers for all blend data
+async function queryPeerBlendData(blendId: string): Promise<void> {
+  if (internalChannel) {
+    try {
+      internalChannel.postMessage({
+        type: 'QUERY_BLEND_DATA',
+        payload: { blendId },
+      });
+    } catch {}
+  }
+  if (realtimeChannel) {
+    try {
+      realtimeChannel.send({
+        type: 'broadcast',
+        event: 'QUERY_BLEND_DATA',
+        payload: { blendId },
+      });
+    } catch {}
+  }
 }
 
 export const backendService = {
@@ -603,6 +691,34 @@ export const backendService = {
     return null;
   },
 
+  async findBlendById(blendId: string): Promise<Blend | null> {
+    const local = sandboxBackend.findBlendById(blendId);
+    if (local) return local;
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('blends')
+          .select('*')
+          .eq('id', blendId)
+          .maybeSingle();
+        if (!error && data) {
+          const raw = data as Record<string, unknown>;
+          const b: Blend = {
+            id: data.id,
+            name: data.name,
+            createdBy: data.created_by,
+            createdAt: data.created_at,
+            blendCode: data.blend_code,
+            icon: typeof raw.icon === 'string' ? raw.icon : undefined,
+          };
+          sandboxBackend.addBlend(b);
+          return b;
+        }
+      } catch {}
+    }
+    return null;
+  },
+
   // Blends
   async getUserBlends(userId?: string): Promise<Blend[]> {
     const currentUserId = userId || sandboxBackend.getActiveUserId();
@@ -640,7 +756,12 @@ export const backendService = {
                 blendCode: b.blend_code,
                 icon: (typeof rawB.icon === 'string' ? rawB.icon : undefined) || local?.icon,
               };
-              sandboxBackend.addBlend(cb);
+              sandboxBackend.addBlend(cb, [{
+                blendId: cb.id,
+                userId: currentUserId,
+                role: cb.createdBy === currentUserId ? 'admin' : 'member',
+                joinedAt: cb.createdAt,
+              }]);
               blendsMap.set(cb.id, cb);
             }
           }
@@ -1037,6 +1158,12 @@ export const backendService = {
       } catch {}
     }
 
+    // Ingest all existing expenses and settlements for this blend immediately
+    try {
+      await this.getBlendExpenses(result.blend.id);
+      await this.getBlendSettlements(result.blend.id);
+    } catch {}
+
     return result;
   },
 
@@ -1201,10 +1328,174 @@ export const backendService = {
       try { realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId } }); } catch {}
     }
 
+    try {
+      await this.getBlendExpenses(blendId);
+      await this.getBlendSettlements(blendId);
+    } catch {}
+
     return newMember;
   },
 
-  // Expenses with Payer Enforcement
+  // Sync an expense and its prerequisites to Supabase cloud
+  async syncExpenseToCloud(expense: Expense): Promise<void> {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      // 1. Ensure creator profile exists
+      const creator = await this.findUserById(expense.createdBy);
+      if (creator) {
+        await supabase.from('profiles').upsert({
+          id: creator.id,
+          email: creator.email,
+          full_name: creator.fullName,
+          initials: creator.initials,
+          avatar_color: creator.avatarColor,
+          invite_code: creator.inviteCode,
+          phone: creator.phone || null,
+        }, { onConflict: 'id' });
+      }
+
+      // 2. Ensure blend exists
+      const blend = await this.findBlendById(expense.blendId);
+      if (blend) {
+        await supabase.from('blends').upsert({
+          id: blend.id,
+          name: blend.name,
+          blend_code: blend.blendCode,
+          icon: blend.icon || null,
+          created_by: blend.createdBy,
+          created_at: blend.createdAt,
+        }, { onConflict: 'id' });
+      }
+
+      // 3. Ensure creator membership exists
+      await supabase.from('blend_members').upsert({
+        blend_id: expense.blendId,
+        user_id: expense.createdBy,
+        role: 'admin',
+      }, { onConflict: 'blend_id,user_id' });
+
+      // 4. Ensure participants profiles and memberships exist
+      for (const pid of expense.participantIds) {
+        const pUser = await this.findUserById(pid);
+        if (pUser) {
+          await supabase.from('profiles').upsert({
+            id: pUser.id,
+            email: pUser.email,
+            full_name: pUser.fullName,
+            initials: pUser.initials,
+            avatar_color: pUser.avatarColor,
+            invite_code: pUser.inviteCode,
+            phone: pUser.phone || null,
+          }, { onConflict: 'id' });
+
+          await supabase.from('blend_members').upsert({
+            blend_id: expense.blendId,
+            user_id: pUser.id,
+            role: 'member',
+          }, { onConflict: 'blend_id,user_id' });
+        }
+      }
+
+      // 5. Ensure safe non-empty description
+      const safeDescription = expense.description?.trim() || `${expense.category.toUpperCase()} Ride`;
+
+      // 6. Upsert expense
+      const { error: expErr } = await supabase.from('expenses').upsert({
+        id: expense.id,
+        blend_id: expense.blendId,
+        created_by: expense.createdBy,
+        payer_id: expense.payerId,
+        amount_paise: expense.amountPaise,
+        category: expense.category,
+        description: safeDescription,
+        date: expense.date,
+        notes: expense.notes || null,
+        created_at: expense.createdAt,
+        updated_at: expense.updatedAt,
+      }, { onConflict: 'id' });
+
+      if (!expErr) {
+        const splitsPayload = Object.entries(expense.shares).map(([uid, share]) => ({
+          expense_id: expense.id,
+          user_id: uid,
+          share_paise: share,
+        }));
+        if (splitsPayload.length > 0) {
+          await supabase.from('expense_splits').upsert(splitsPayload, { onConflict: 'expense_id,user_id' });
+        }
+      } else {
+        console.warn('Supabase syncExpenseToCloud upsert error:', expErr);
+      }
+    } catch (err) {
+      console.warn('syncExpenseToCloud note:', err);
+    }
+  },
+
+  // Sync a settlement and its prerequisites to Supabase cloud
+  async syncSettlementToCloud(settlement: Settlement): Promise<void> {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const fromUser = await this.findUserById(settlement.fromMemberId);
+      if (fromUser) {
+        await supabase.from('profiles').upsert({
+          id: fromUser.id,
+          email: fromUser.email,
+          full_name: fromUser.fullName,
+          initials: fromUser.initials,
+          avatar_color: fromUser.avatarColor,
+          invite_code: fromUser.inviteCode,
+          phone: fromUser.phone || null,
+        }, { onConflict: 'id' });
+      }
+
+      const toUser = await this.findUserById(settlement.toMemberId);
+      if (toUser) {
+        await supabase.from('profiles').upsert({
+          id: toUser.id,
+          email: toUser.email,
+          full_name: toUser.fullName,
+          initials: toUser.initials,
+          avatar_color: toUser.avatarColor,
+          invite_code: toUser.inviteCode,
+          phone: toUser.phone || null,
+        }, { onConflict: 'id' });
+      }
+
+      const blend = await this.findBlendById(settlement.blendId);
+      if (blend) {
+        await supabase.from('blends').upsert({
+          id: blend.id,
+          name: blend.name,
+          blend_code: blend.blendCode,
+          icon: blend.icon || null,
+          created_by: blend.createdBy,
+          created_at: blend.createdAt,
+        }, { onConflict: 'id' });
+      }
+
+      await supabase.from('settlements').upsert({
+        id: settlement.id,
+        blend_id: settlement.blendId,
+        created_by: settlement.createdBy,
+        from_user_id: settlement.fromMemberId,
+        to_user_id: settlement.toMemberId,
+        amount_paise: settlement.amountPaise,
+        date: settlement.date,
+        notes: settlement.notes || null,
+        status: settlement.status,
+        proof_image_url: settlement.proofImageUrl || null,
+        decision_notes: settlement.decisionNotes || null,
+        confirmed_at: settlement.confirmedAt || null,
+        rejected_at: settlement.rejectedAt || null,
+        created_at: settlement.createdAt,
+        updated_at: settlement.updatedAt,
+      }, { onConflict: 'id' });
+    } catch (err) {
+      console.warn('syncSettlementToCloud note:', err);
+    }
+  },
+
+  // Expenses with Payer Enforcement & Bidirectional Auto-Reconciliation
   async getBlendExpenses(blendId: string): Promise<Expense[]> {
     if (isSupabaseConfigured && supabase) {
       try {
@@ -1214,8 +1505,11 @@ export const backendService = {
           .eq('blend_id', blendId)
           .order('date', { ascending: false });
 
+        const cloudExpenseIds = new Set<string>();
+
         if (!error && data && Array.isArray(data)) {
           for (const exp of data) {
+            cloudExpenseIds.add(exp.id);
             const shares: Record<string, number> = {};
             const participantIds: string[] = [];
             for (const s of exp.expense_splits || []) {
@@ -1240,10 +1534,26 @@ export const backendService = {
             sandboxBackend.addExpense(mappedExp);
           }
         }
+
+        // AUTO-RECONCILIATION: Upload any local expenses for this blend that are missing from cloud
+        try {
+          const localExpenses = sandboxBackend.getAllExpensesForBlend(blendId);
+          for (const localExp of localExpenses) {
+            if (!cloudExpenseIds.has(localExp.id)) {
+              await this.syncExpenseToCloud(localExp);
+            }
+          }
+        } catch (syncErr) {
+          console.warn('Local-to-cloud expense auto-reconcile note:', syncErr);
+        }
       } catch (err) {
         console.warn('Supabase getBlendExpenses fallback to sandbox:', err);
       }
     }
+
+    // Query active peers for peer-cached data
+    queryPeerBlendData(blendId).catch(() => {});
+
     return sandboxBackend.getBlendExpenses(blendId);
   },
 
@@ -1260,79 +1570,17 @@ export const backendService = {
     }
   ): Promise<Expense> {
     const expense = sandboxBackend.createExpense(blendId, data);
-    const currentUser = sandboxBackend.getCurrentUser();
-
-    if (isSupabaseConfigured && supabase) {
-      try {
-        // Ensure creator & all participants exist in profiles table
-        await supabase.from('profiles').upsert({
-          id: currentUser.id,
-          email: currentUser.email,
-          full_name: currentUser.fullName,
-          initials: currentUser.initials,
-          avatar_color: currentUser.avatarColor,
-          invite_code: currentUser.inviteCode,
-          phone: currentUser.phone || null,
-        }, { onConflict: 'id' });
-
-        for (const pid of expense.participantIds) {
-          const pUser = sandboxBackend.findUserById(pid);
-          if (pUser) {
-            await supabase.from('profiles').upsert({
-              id: pUser.id,
-              email: pUser.email,
-              full_name: pUser.fullName,
-              initials: pUser.initials,
-              avatar_color: pUser.avatarColor,
-              invite_code: pUser.inviteCode,
-              phone: pUser.phone || null,
-            }, { onConflict: 'id' });
-          }
-        }
-
-        // Upsert expense
-        const { error: expErr } = await supabase
-          .from('expenses')
-          .upsert({
-            id: expense.id,
-            blend_id: blendId,
-            created_by: expense.createdBy,
-            payer_id: expense.payerId,
-            amount_paise: expense.amountPaise,
-            category: expense.category,
-            description: expense.description,
-            date: expense.date,
-            notes: expense.notes || null,
-            created_at: expense.createdAt,
-            updated_at: expense.updatedAt,
-          }, { onConflict: 'id' });
-
-        if (!expErr) {
-          const splitsPayload = Object.entries(expense.shares).map(([uid, share]) => ({
-            expense_id: expense.id,
-            user_id: uid,
-            share_paise: share,
-          }));
-          if (splitsPayload.length > 0) {
-            await supabase.from('expense_splits').upsert(splitsPayload, { onConflict: 'expense_id,user_id' });
-          }
-        } else {
-          console.warn('Supabase expense upsert note:', expErr);
-        }
-      } catch (err) {
-        console.warn('Supabase addExpense note:', err);
-      }
-    }
+    await this.syncExpenseToCloud(expense);
 
     if (internalChannel) {
       try {
-        internalChannel.postMessage({ type: 'EXPENSE_SYNC', payload: { expense } });
+        internalChannel.postMessage({ type: 'EXPENSE_SYNC', payload: { expense, blendId } });
         internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId } });
       } catch {}
     }
     if (realtimeChannel) {
       try {
-        realtimeChannel.send({ type: 'broadcast', event: 'EXPENSE_SYNC', payload: { expense } });
+        realtimeChannel.send({ type: 'broadcast', event: 'EXPENSE_SYNC', payload: { expense, blendId } });
         realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId } });
       } catch {}
     }
@@ -1352,44 +1600,17 @@ export const backendService = {
     }
   ): Promise<Expense> {
     const updated = sandboxBackend.updateExpense(expenseId, data);
-
-    if (isSupabaseConfigured && supabase) {
-      try {
-        await supabase
-          .from('expenses')
-          .update({
-            amount_paise: data.amountPaise,
-            category: data.category,
-            description: data.description.trim(),
-            date: data.date,
-            notes: data.notes?.trim() || null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', expenseId);
-
-        await supabase.from('expense_splits').delete().eq('expense_id', expenseId);
-        const splitsPayload = Object.entries(updated.shares).map(([uid, share]) => ({
-          expense_id: expenseId,
-          user_id: uid,
-          share_paise: share,
-        }));
-        if (splitsPayload.length > 0) {
-          await supabase.from('expense_splits').insert(splitsPayload);
-        }
-      } catch (err) {
-        console.warn('Supabase updateExpense sync note:', err);
-      }
-    }
+    await this.syncExpenseToCloud(updated);
 
     if (internalChannel) {
       try {
-        internalChannel.postMessage({ type: 'EXPENSE_SYNC', payload: { expense: updated } });
+        internalChannel.postMessage({ type: 'EXPENSE_SYNC', payload: { expense: updated, blendId: updated.blendId } });
         internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId: updated.blendId } });
       } catch {}
     }
     if (realtimeChannel) {
       try {
-        realtimeChannel.send({ type: 'broadcast', event: 'EXPENSE_SYNC', payload: { expense: updated } });
+        realtimeChannel.send({ type: 'broadcast', event: 'EXPENSE_SYNC', payload: { expense: updated, blendId: updated.blendId } });
         realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId: updated.blendId } });
       } catch {}
     }
@@ -1425,7 +1646,7 @@ export const backendService = {
     }
   },
 
-  // Settlements
+  // Settlements with Bidirectional Auto-Reconciliation
   async getBlendSettlements(blendId: string): Promise<Settlement[]> {
     if (isSupabaseConfigured && supabase) {
       try {
@@ -1434,8 +1655,12 @@ export const backendService = {
           .select('*')
           .eq('blend_id', blendId)
           .order('date', { ascending: false });
+
+        const cloudSettlementIds = new Set<string>();
+
         if (!error && data && Array.isArray(data)) {
           for (const s of data) {
+            cloudSettlementIds.add(s.id);
             const mapped: Settlement = {
               id: s.id,
               blendId: s.blend_id,
@@ -1454,6 +1679,18 @@ export const backendService = {
             };
             sandboxBackend.addSettlement(mapped);
           }
+        }
+
+        // AUTO-RECONCILIATION: Upload any local settlements for this blend that are missing from cloud
+        try {
+          const localSettlements = sandboxBackend.getAllSettlementsForBlend(blendId);
+          for (const localSet of localSettlements) {
+            if (!cloudSettlementIds.has(localSet.id)) {
+              await this.syncSettlementToCloud(localSet);
+            }
+          }
+        } catch (syncErr) {
+          console.warn('Local-to-cloud settlement auto-reconcile note:', syncErr);
         }
       } catch (err) {
         console.warn('Supabase getBlendSettlements fallback to sandbox:', err);
@@ -1480,51 +1717,17 @@ export const backendService = {
     }
 
     const s = sandboxBackend.createSettlement(blendId, data);
-    const currentUser = sandboxBackend.getCurrentUser();
-
-    if (isSupabaseConfigured && supabase) {
-      try {
-        for (const uid of [s.fromMemberId, s.toMemberId]) {
-          const u = sandboxBackend.findUserById(uid);
-          if (u) {
-            await supabase.from('profiles').upsert({
-              id: u.id,
-              email: u.email,
-              full_name: u.fullName,
-              initials: u.initials,
-              avatar_color: u.avatarColor,
-              invite_code: u.inviteCode,
-              phone: u.phone || null,
-            }, { onConflict: 'id' });
-          }
-        }
-
-        await supabase.from('settlements').upsert({
-          id: s.id,
-          blend_id: blendId,
-          created_by: currentUser.id,
-          from_user_id: s.fromMemberId,
-          to_user_id: s.toMemberId,
-          amount_paise: s.amountPaise,
-          date: s.date,
-          notes: s.notes || null,
-          status: s.status,
-          created_at: s.createdAt,
-        }, { onConflict: 'id' });
-      } catch (err) {
-        console.warn('Supabase createSettlement note:', err);
-      }
-    }
+    await this.syncSettlementToCloud(s);
 
     if (internalChannel) {
       try {
-        internalChannel.postMessage({ type: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        internalChannel.postMessage({ type: 'SETTLEMENT_SYNC', payload: { settlement: s, blendId } });
         internalChannel.postMessage({ type: 'RELOAD_DATA', payload: { blendId } });
       } catch {}
     }
     if (realtimeChannel) {
       try {
-        realtimeChannel.send({ type: 'broadcast', event: 'SETTLEMENT_SYNC', payload: { settlement: s } });
+        realtimeChannel.send({ type: 'broadcast', event: 'SETTLEMENT_SYNC', payload: { settlement: s, blendId } });
         realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: { blendId } });
       } catch {}
     }

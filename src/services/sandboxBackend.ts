@@ -296,6 +296,33 @@ class SandboxBackendService {
                 }
               }
             }
+            if (stored.expenses && Array.isArray(stored.expenses)) {
+              for (const se of stored.expenses) {
+                const idx = db.expenses.findIndex(e => e.id === se.id);
+                if (idx >= 0) {
+                  db.expenses[idx] = { ...se, ...db.expenses[idx] };
+                } else {
+                  db.expenses.push(se);
+                }
+              }
+            }
+            if (stored.settlements && Array.isArray(stored.settlements)) {
+              for (const ss of stored.settlements) {
+                const idx = db.settlements.findIndex(s => s.id === ss.id);
+                if (idx >= 0) {
+                  db.settlements[idx] = { ...ss, ...db.settlements[idx] };
+                } else {
+                  db.settlements.push(ss);
+                }
+              }
+            }
+            if (stored.notifications && Array.isArray(stored.notifications)) {
+              for (const sn of stored.notifications) {
+                if (!db.notifications.some(n => n.id === sn.id)) {
+                  db.notifications.push(sn);
+                }
+              }
+            }
           } catch {
             // ignore parse error
           }
@@ -522,6 +549,26 @@ class SandboxBackendService {
     const blend = this.findBlendByCode(code);
     if (blend) return { type: 'blend', blend };
     return null;
+  }
+
+  public findBlendById(blendId: string): Blend | null {
+    this.syncFromStorage();
+    if (this.deletedBlendIds.has(blendId)) return null;
+    return this.db.blends.find(b => b.id === blendId) || null;
+  }
+
+  public getAllExpensesForBlend(blendId: string): Expense[] {
+    this.syncFromStorage();
+    return this.db.expenses
+      .filter(e => e.blendId === blendId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+
+  public getAllSettlementsForBlend(blendId: string): Settlement[] {
+    this.syncFromStorage();
+    return this.db.settlements
+      .filter(s => s.blendId === blendId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
   // --- Blend Management ---
@@ -929,6 +976,7 @@ class SandboxBackendService {
   }
 
   public getBlendExpenses(blendId: string): Expense[] {
+    this.syncFromStorage();
     const currentUser = this.getCurrentUser();
     // Validate membership
     const isMember = this.db.blendMembers.some(
@@ -955,6 +1003,7 @@ class SandboxBackendService {
       forgedPayerId?: string; // used to test/verify that forging payer is strictly blocked!
     }
   ): Expense {
+    this.syncFromStorage();
     const currentUser = this.getCurrentUser();
 
     // 1. Membership check
@@ -1064,6 +1113,7 @@ class SandboxBackendService {
   // --- Settlements ---
 
   public getBlendSettlements(blendId: string): Settlement[] {
+    this.syncFromStorage();
     const currentUser = this.getCurrentUser();
     const isMember = this.db.blendMembers.some(
       bm => bm.blendId === blendId && bm.userId === currentUser.id
@@ -1087,6 +1137,7 @@ class SandboxBackendService {
       notes?: string;
     }
   ): Settlement {
+    this.syncFromStorage();
     const currentUser = this.getCurrentUser();
 
     // CRITICAL: Authenticated user must be the sender (no impersonation)

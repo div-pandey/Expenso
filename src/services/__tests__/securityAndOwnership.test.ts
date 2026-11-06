@@ -337,6 +337,70 @@ describe('Security, Payer Ownership & Blend Isolation Engine', () => {
       expect(balances[satyam.id].netBalancePaise).toBe(-50000); // Satyam owes ₹500
       expect(balances['user_you'].netBalancePaise).toBe(50000); // Div is owed ₹500
     }, 30000);
+
+    it('guarantees all historical and first expenses sync reliably between two accounts', async () => {
+      const arpit = await backendService.registerUser('Arpit User', 'arpit@campus.edu');
+      sandboxBackend.switchActiveUser('user_you');
+
+      // 1. Person A creates blend with Person B's code
+      const blend = await backendService.createBlend('Campus Carpool', [arpit.inviteCode]);
+      expect(blend).toBeDefined();
+
+      // 2. Person A adds FIRST expense (₹1,000 metro)
+      const exp1 = await backendService.createExpense(blend.id, {
+        amountPaise: 100000,
+        category: 'metro',
+        description: 'First Ride at 9:07 pm',
+        participantIds: ['user_you', arpit.id],
+        date: new Date().toISOString(),
+      });
+      expect(exp1.id).toBeDefined();
+
+      // 3. Person B (Arpit) switches and loads blend expenses
+      sandboxBackend.switchActiveUser(arpit.id);
+      const arpitExpenses = await backendService.getBlendExpenses(blend.id);
+
+      // 4. Verify Person B sees the FIRST expense
+      expect(arpitExpenses.some(e => e.id === exp1.id)).toBe(true);
+
+      // 5. Person B records SECOND expense (₹2,000 metro)
+      const exp2 = await backendService.createExpense(blend.id, {
+        amountPaise: 200000,
+        category: 'metro',
+        description: 'Second Ride at 9:08 pm',
+        participantIds: ['user_you', arpit.id],
+        date: new Date().toISOString(),
+      });
+      expect(exp2.id).toBeDefined();
+
+      // 6. Person A switches back and loads blend expenses
+      sandboxBackend.switchActiveUser('user_you');
+      const personAExpenses = await backendService.getBlendExpenses(blend.id);
+
+      // 7. Verify both members see both expenses
+      expect(personAExpenses.some(e => e.id === exp1.id)).toBe(true);
+      expect(personAExpenses.some(e => e.id === exp2.id)).toBe(true);
+
+      // 8. Person B loads again and still sees both expenses
+      sandboxBackend.switchActiveUser(arpit.id);
+      const personBExpensesAgain = await backendService.getBlendExpenses(blend.id);
+      expect(personBExpensesAgain.some(e => e.id === exp1.id)).toBe(true);
+      expect(personBExpensesAgain.some(e => e.id === exp2.id)).toBe(true);
+
+      // 9. Verify mathematical accuracy of equal split balances
+      const blendMembers = await backendService.getBlendMembers(blend.id);
+      const membersForCalc = blendMembers.map(bm => ({
+        id: bm.userId,
+        name: bm.profile.fullName,
+        initials: bm.profile.initials,
+        avatarColor: bm.profile.avatarColor,
+      }));
+      const balances = calculateMemberBalances(membersForCalc, personBExpensesAgain, []);
+      // Person A paid ₹1,000 (share 500) and owes 1,000 on second ride -> Net: -₹500 (owes ₹500)
+      // Person B paid ₹2,000 (share 1,000) and owes 500 on first ride -> Net: +₹500 (is owed ₹500)
+      expect(balances['user_you'].netBalancePaise).toBe(-50000);
+      expect(balances[arpit.id].netBalancePaise).toBe(50000);
+    }, 30000);
   });
 
   describe('Blend Admin Privileges, Membership Management & Custom PFP', () => {

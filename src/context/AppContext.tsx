@@ -342,8 +342,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Realtime & Cross-tab broadcast listener for instant sync
   useEffect(() => {
     const handleSync = (event?: { type: string; payload?: unknown }) => {
-      const p = event?.payload as { blendId?: string; blend?: { id: string } } | undefined;
-      const targetId = p?.blendId || p?.blend?.id || currentBlend?.id;
+      const p = event?.payload as {
+        blendId?: string;
+        blend?: { id: string };
+        expense?: { blendId?: string };
+        settlement?: { blendId?: string };
+      } | undefined;
+      const targetId = p?.blendId || p?.blend?.id || p?.expense?.blendId || p?.settlement?.blendId || currentBlend?.id;
       reloadData(targetId);
     };
     backendService.onSync(handleSync);
