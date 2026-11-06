@@ -102,6 +102,13 @@ if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
         if (changed) {
           notifySyncListeners({ type: 'RELOAD_DATA', payload: { blendId: payload.blendId } });
         }
+      } else if (type === 'USER_PAYMENT_METHOD_SYNC' && payload?.userId && payload?.paymentMethod) {
+        const u = sandboxBackend.findUserById(payload.userId);
+        if (u) {
+          u.paymentMethod = payload.paymentMethod;
+          sandboxBackend.addUser(u);
+        }
+        notifySyncListeners({ type: 'RELOAD_DATA', payload });
       } else if (type === 'RELOAD_DATA') {
         notifySyncListeners({ type: 'RELOAD_DATA', payload });
       }
@@ -164,6 +171,16 @@ if (isSupabaseConfigured && supabase) {
       .on('broadcast', { event: 'DELETE_BLEND' }, ({ payload }) => {
         if (payload?.blendId) {
           sandboxBackend.forceDeleteBlend(payload.blendId);
+          notifySyncListeners({ type: 'RELOAD_DATA', payload });
+        }
+      })
+      .on('broadcast', { event: 'USER_PAYMENT_METHOD_SYNC' }, ({ payload }) => {
+        if (payload?.userId && payload?.paymentMethod) {
+          const u = sandboxBackend.findUserById(payload.userId);
+          if (u) {
+            u.paymentMethod = payload.paymentMethod;
+            sandboxBackend.addUser(u);
+          }
           notifySyncListeners({ type: 'RELOAD_DATA', payload });
         }
       })
@@ -665,7 +682,7 @@ export const backendService = {
 
   async findUserById(userId: string): Promise<UserProfile | null> {
     const local = sandboxBackend.findUserById(userId);
-    if (local) return local;
+    if (local && local.paymentMethod) return local;
     if (isSupabaseConfigured && supabase) {
       try {
         const { data, error } = await supabase
@@ -674,6 +691,27 @@ export const backendService = {
           .eq('id', userId)
           .maybeSingle();
         if (!error && data) {
+          let paymentMethod = local?.paymentMethod;
+          try {
+            const { data: pm } = await supabase
+              .from('payment_methods')
+              .select('*')
+              .eq('user_id', userId)
+              .maybeSingle();
+            if (pm) {
+              paymentMethod = {
+                userId: pm.user_id,
+                payeeName: pm.payee_name,
+                upiId: pm.upi_id,
+                qrPayload: pm.qr_payload || undefined,
+                qrFormatVerified: pm.qr_format_verified,
+                currency: pm.currency || 'INR',
+                createdAt: pm.created_at,
+                updatedAt: pm.updated_at,
+              };
+            }
+          } catch {}
+
           const u: UserProfile = {
             id: data.id,
             email: data.email,
@@ -682,6 +720,7 @@ export const backendService = {
             avatarColor: data.avatar_color,
             inviteCode: data.invite_code,
             phone: data.phone,
+            paymentMethod,
             createdAt: data.created_at,
           };
           sandboxBackend.addUser(u);
@@ -689,7 +728,7 @@ export const backendService = {
         }
       } catch {}
     }
-    return null;
+    return local || null;
   },
 
   async findBlendById(blendId: string): Promise<Blend | null> {
@@ -782,6 +821,18 @@ export const backendService = {
           .select('*, profile:profiles(*)')
           .eq('blend_id', blendId);
         if (!error && data && data.length > 0) {
+          const memberUserIds = data.map(bm => bm.user_id);
+          let pmMap = new Map<string, any>();
+          try {
+            const { data: pmData } = await supabase
+              .from('payment_methods')
+              .select('*')
+              .in('user_id', memberUserIds);
+            if (pmData && pmData.length > 0) {
+              pmMap = new Map(pmData.map(p => [p.user_id, p]));
+            }
+          } catch {}
+
           const memberList: { blendId: string; userId: string; role: 'admin' | 'member'; joinedAt: string }[] = [];
           for (const bm of data) {
             memberList.push({
@@ -790,6 +841,18 @@ export const backendService = {
               role: bm.role || 'member',
               joinedAt: bm.joined_at || new Date().toISOString(),
             });
+            const pm = pmMap.get(bm.user_id);
+            const paymentMethod: UserPaymentMethod | undefined = pm ? {
+              userId: pm.user_id,
+              payeeName: pm.payee_name,
+              upiId: pm.upi_id,
+              qrPayload: pm.qr_payload || undefined,
+              qrFormatVerified: pm.qr_format_verified,
+              currency: pm.currency || 'INR',
+              createdAt: pm.created_at,
+              updatedAt: pm.updated_at,
+            } : undefined;
+
             if (bm.profile) {
               sandboxBackend.addUser({
                 id: bm.profile.id,
@@ -799,29 +862,45 @@ export const backendService = {
                 avatarColor: bm.profile.avatar_color,
                 inviteCode: bm.profile.invite_code,
                 phone: bm.profile.phone,
+                paymentMethod,
                 createdAt: bm.profile.created_at,
               });
             }
           }
           sandboxBackend.addBlendMembers(blendId, memberList);
 
-          return data.map(bm => ({
-            id: bm.id,
-            blendId: bm.blend_id,
-            userId: bm.user_id,
-            role: bm.role as 'admin' | 'member',
-            joinedAt: bm.joined_at,
-            profile: {
-              id: bm.profile?.id || bm.user_id,
-              email: bm.profile?.email || '',
-              fullName: bm.profile?.full_name || 'Member',
-              initials: bm.profile?.initials || 'M',
-              avatarColor: bm.profile?.avatar_color || 'bg-brand-600 text-white',
-              inviteCode: bm.profile?.invite_code || '',
-              phone: bm.profile?.phone || undefined,
-              createdAt: bm.profile?.created_at || bm.joined_at,
-            },
-          }));
+          return data.map(bm => {
+            const pm = pmMap.get(bm.user_id);
+            const paymentMethod: UserPaymentMethod | undefined = pm ? {
+              userId: pm.user_id,
+              payeeName: pm.payee_name,
+              upiId: pm.upi_id,
+              qrPayload: pm.qr_payload || undefined,
+              qrFormatVerified: pm.qr_format_verified,
+              currency: pm.currency || 'INR',
+              createdAt: pm.created_at,
+              updatedAt: pm.updated_at,
+            } : undefined;
+
+            return {
+              id: bm.id,
+              blendId: bm.blend_id,
+              userId: bm.user_id,
+              role: bm.role as 'admin' | 'member',
+              joinedAt: bm.joined_at,
+              profile: {
+                id: bm.profile?.id || bm.user_id,
+                email: bm.profile?.email || '',
+                fullName: bm.profile?.full_name || 'Member',
+                initials: bm.profile?.initials || 'M',
+                avatarColor: bm.profile?.avatar_color || 'bg-brand-600 text-white',
+                inviteCode: bm.profile?.invite_code || '',
+                phone: bm.profile?.phone || undefined,
+                paymentMethod,
+                createdAt: bm.profile?.created_at || bm.joined_at,
+              },
+            };
+          });
         }
       } catch (err) {
         console.warn('Supabase getBlendMembers fallback note:', err);
@@ -2028,6 +2107,35 @@ export const backendService = {
 
   async updateUserPaymentMethod(userId: string, paymentMethod: UserPaymentMethod): Promise<void> {
     sandboxBackend.updateUserPaymentMethod(userId, paymentMethod);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('payment_methods').upsert({
+          user_id: userId,
+          payee_name: paymentMethod.payeeName,
+          upi_id: paymentMethod.upiId,
+          qr_payload: paymentMethod.qrPayload || null,
+          qr_format_verified: paymentMethod.qrFormatVerified ?? true,
+          currency: paymentMethod.currency || 'INR',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+      } catch (err) {
+        console.warn('Supabase updateUserPaymentMethod note:', err);
+      }
+    }
+
+    if (internalChannel) {
+      try {
+        internalChannel.postMessage({ type: 'USER_PAYMENT_METHOD_SYNC', payload: { userId, paymentMethod } });
+        internalChannel.postMessage({ type: 'RELOAD_DATA', payload: {} });
+      } catch {}
+    }
+    if (realtimeChannel) {
+      try {
+        realtimeChannel.send({ type: 'broadcast', event: 'USER_PAYMENT_METHOD_SYNC', payload: { userId, paymentMethod } });
+        realtimeChannel.send({ type: 'broadcast', event: 'RELOAD_DATA', payload: {} });
+      } catch {}
+    }
   },
 
   async getUserPaymentMethod(userId: string): Promise<UserPaymentMethod | undefined> {
