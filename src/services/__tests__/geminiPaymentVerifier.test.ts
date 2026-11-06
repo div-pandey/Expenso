@@ -233,7 +233,7 @@ describe('Gemini AI Payment Proof Verification Engine', () => {
       expect(result.rejectionReason).toContain('Failed or Declined');
     });
 
-    it('falls back to smart vision heuristic when Gemini API fails or throws network error', async () => {
+    it('returns rejection when Gemini API fails or throws network error', async () => {
       vi.stubGlobal(
         'fetch',
         vi.fn().mockRejectedValue(new Error('Network error connecting to Gemini API'))
@@ -246,17 +246,21 @@ describe('Gemini AI Payment Proof Verification Engine', () => {
         recipientName: 'yo yo',
       });
 
-      expect(result.engineUsed).toBe('smart-vision-heuristic');
+      expect(result.isValid).toBe(false);
+      expect(result.rejectionReason).toContain('AI verification could not be completed');
+      expect(result.engineUsed).toBe('gemini-ai');
     });
 
-    it('falls back to smart vision heuristic when no API key is provided', async () => {
+    it('falls back to smart vision heuristic when no API key is provided and requires key', async () => {
       const result = await verifyPaymentProofWithGemini({
         imageDataUrl: 'data:image/png;base64,sample_receipt',
         expectedAmountPaise: 200000,
         recipientName: 'yo yo',
       });
 
+      expect(result.isValid).toBe(false);
       expect(result.engineUsed).toBe('smart-vision-heuristic');
+      expect(result.rejectionReason).toContain('Gemini AI key required');
     });
   });
 });

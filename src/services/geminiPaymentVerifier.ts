@@ -73,7 +73,7 @@ export async function verifyPaymentProofWithGemini(params: {
   const expectedRupees = expectedAmountPaise / 100;
   const apiKey = params.apiKey || getGeminiApiKey();
 
-  // If Gemini API key is available, run multimodal Gemini 1.5/2.0 Flash
+  // If Gemini API key is available, run multimodal Gemini Flash
   if (apiKey) {
     try {
       const geminiResult = await runGeminiVisionAnalysis({
@@ -86,8 +86,15 @@ export async function verifyPaymentProofWithGemini(params: {
       });
       return geminiResult;
     } catch (err) {
-      console.warn('Gemini API call failed, falling back to smart vision inspector:', err);
-      // Fall through to smart vision inspector
+      console.error('Gemini API verification failed:', err);
+      const msg = err instanceof Error ? err.message : 'AI verification failed';
+      return {
+        isValid: false,
+        confidence: 0,
+        rejectionReason: `AI verification could not be completed: ${msg}. Please ensure your screenshot is a valid receipt.`,
+        summary: 'AI Verification Error',
+        engineUsed: 'gemini-ai',
+      };
     }
   }
 
@@ -154,7 +161,14 @@ Respond ONLY with a valid JSON object following this exact schema, with no markd
   "summary": string
 }`;
 
-  const models = ['gemini-1.5-flash', 'gemini-2.0-flash'];
+  const models = [
+    'gemini-3.5-flash',
+    'gemini-3.6-flash',
+    'gemini-flash-latest',
+    'gemini-3.8-flash',
+    'gemini-2.5-flash',
+    'gemini-1.5-flash',
+  ];
   let lastError: unknown;
   const cleanKey = apiKey.trim();
 
@@ -252,9 +266,10 @@ async function runSmartVisionInspection(params: {
 
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return {
-      isValid: true,
-      confidence: 0.8,
-      summary: 'Heuristic check passed',
+      isValid: false,
+      confidence: 0,
+      rejectionReason: 'Gemini AI key required to verify payment screenshot authenticity.',
+      summary: 'AI Verification Required',
       engineUsed: 'smart-vision-heuristic',
     };
   }
@@ -397,20 +412,18 @@ async function runSmartVisionInspection(params: {
           : 'UPI Banking App';
 
         resolve({
-          isValid: true,
-          confidence: 0.88,
-          detectedApp,
-          detectedAmount: expectedRupees,
-          detectedUtr: expectedUtr || undefined,
-          summary: `Payment receipt structure verified (${detectedApp}).`,
+          isValid: false,
+          confidence: 0.2,
+          rejectionReason: 'Gemini AI verification is required to verify receipts and cross-check payment amounts. Please configure your free Gemini API key to activate verification.',
+          summary: 'Gemini API Key Required',
           engineUsed: 'smart-vision-heuristic',
         });
       } catch {
-        // Safe fallback if canvas operations encounter security restrictions
         resolve({
-          isValid: true,
-          confidence: 0.8,
-          summary: 'Visual checks complete',
+          isValid: false,
+          confidence: 0,
+          rejectionReason: 'Gemini AI verification is required to verify payment receipts.',
+          summary: 'Verification required',
           engineUsed: 'smart-vision-heuristic',
         });
       }
