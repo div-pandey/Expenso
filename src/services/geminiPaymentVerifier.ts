@@ -32,7 +32,15 @@ export function getGeminiApiKey(): string {
     }
   }
   const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) || '';
-  if (envKey && typeof envKey === 'string' && envKey.trim()) {
+  if (typeof envKey === 'string' && envKey.trim()) {
+    // Cache to localStorage for instant client retrieval across tabs
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('expenso_gemini_api_key', envKey.trim());
+      } catch {
+        // localStorage full or restricted
+      }
+    }
     return envKey.trim();
   }
   return '';
@@ -391,8 +399,20 @@ async function runSmartVisionInspection(params: {
         const hasPaymentAppTheme = greenSuccessPixels > 15 || bluePaytmPixels > 25 || purplePhonePePixels > 20;
         const hasReceiptCardStructure = whiteLightPixels > sampledCount * 0.15;
 
-        // If the image lacks both receipt card structure and any UPI app colors, it's very likely a random photo
-        if (!hasPaymentAppTheme && !hasReceiptCardStructure && avgVariance > 160) {
+        // If the image lacks UPI app colors and themes, it's a random photo, ID badge, or non-receipt
+        if (!hasPaymentAppTheme) {
+          resolve({
+            isValid: false,
+            confidence: 0.2,
+            rejectionReason: 'The uploaded image does not appear to be a valid payment receipt (no UPI or banking transaction elements detected). Please upload an authentic screenshot of your completed payment.',
+            summary: 'Not a payment receipt',
+            engineUsed: 'smart-vision-heuristic',
+          });
+          return;
+        }
+
+        // If the image lacks receipt card structure and has high variance
+        if (!hasReceiptCardStructure && avgVariance > 160) {
           resolve({
             isValid: false,
             confidence: 0.2,
