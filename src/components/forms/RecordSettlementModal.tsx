@@ -23,6 +23,7 @@ import {
   Loader2,
   Upload,
   XCircle,
+  AlertCircle,
 } from 'lucide-react';
 
 export const RecordSettlementModal: React.FC = () => {
@@ -178,6 +179,17 @@ export const RecordSettlementModal: React.FC = () => {
         confidence: 0,
         rejectionReason: msg,
         summary: 'Failed to verify proof',
+        issues: [msg],
+        checklist: {
+          isReceipt: false,
+          receiptDetail: 'Verification process failed',
+          isAmountMatch: false,
+          amountDetail: `Expected ${formatCurrency(parsedAmountPaise)}`,
+          isStatusSuccess: false,
+          statusDetail: 'Unverified',
+          isUtrFound: false,
+          utrDetail: 'Unverified',
+        },
         engineUsed: 'smart-vision-heuristic',
       });
       showToast(msg, 'error');
@@ -624,25 +636,127 @@ export const RecordSettlementModal: React.FC = () => {
                   </div>
                 )}
 
+                {/* Verification Failed Card with Specific Reason Breakdown */}
                 {verificationResult && !verificationResult.isValid && !isVerifying && (
-                  <div className="p-3 bg-rose-50 border border-rose-300 rounded-xl space-y-1 text-xs text-rose-900 animate-pop-in">
-                    <div className="flex items-center gap-1.5 font-bold text-rose-700">
-                      <XCircle className="w-4 h-4 shrink-0" />
-                      <span>AI Verification Failed</span>
+                  <div className="p-3.5 bg-rose-50 border-2 border-rose-300 rounded-2xl space-y-2.5 text-xs text-rose-950 animate-pop-in">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-bold text-rose-700 text-sm">
+                        <XCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                        <span>AI Verification Rejected</span>
+                      </div>
+                      {verificationResult.detectedApp && verificationResult.detectedApp !== 'None' && verificationResult.detectedApp !== 'Unknown' && (
+                        <span className="text-[10px] font-bold bg-white text-rose-800 px-2 py-0.5 rounded border border-rose-200">
+                          {verificationResult.detectedApp}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-[11px] text-rose-800 leading-relaxed font-semibold">
-                      {verificationResult.rejectionReason}
-                    </p>
-                    <p className="text-[10px] text-rose-600">
-                      Please upload an authentic, clear screenshot of the completed payment. Fake, wrong, or uncompleted transaction screenshots cannot be submitted.
-                    </p>
+
+                    {/* Primary Reason */}
+                    <div className="p-2.5 bg-white/90 rounded-xl border border-rose-200">
+                      <p className="text-xs font-bold text-rose-900 leading-snug">
+                        {verificationResult.rejectionReason}
+                      </p>
+                    </div>
+
+                    {/* Specific Checklist Breakdown */}
+                    {verificationResult.checklist && (
+                      <div className="bg-white/80 rounded-xl p-2.5 border border-rose-200 space-y-2 text-[11px]">
+                        <p className="text-[10px] uppercase font-bold text-rose-900 tracking-wider">
+                          Inspection Checklist:
+                        </p>
+                        
+                        {/* 1. Receipt Authenticity */}
+                        <div className="flex items-start gap-2">
+                          {verificationResult.checklist.isReceipt ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5 stroke-[2.5]" />
+                          ) : (
+                            <X className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5 stroke-[2.5]" />
+                          )}
+                          <div className="flex-1">
+                            <span className="font-semibold text-charcoal-800">Screenshot Authenticity: </span>
+                            <span className={verificationResult.checklist.isReceipt ? 'text-emerald-700 font-medium' : 'text-rose-700 font-semibold'}>
+                              {verificationResult.checklist.receiptDetail || (verificationResult.checklist.isReceipt ? 'Valid payment confirmation' : 'Not a payment receipt')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* 2. Amount Check */}
+                        <div className="flex items-start gap-2">
+                          {verificationResult.checklist.isAmountMatch ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5 stroke-[2.5]" />
+                          ) : (
+                            <X className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5 stroke-[2.5]" />
+                          )}
+                          <div className="flex-1">
+                            <span className="font-semibold text-charcoal-800">Amount Check: </span>
+                            <span className={verificationResult.checklist.isAmountMatch ? 'text-emerald-700 font-medium' : 'text-rose-700 font-semibold'}>
+                              {verificationResult.checklist.amountDetail || (verificationResult.checklist.isAmountMatch ? `Exact ${formatCurrency(parsedAmountPaise)} match` : `Does not match ${formatCurrency(parsedAmountPaise)}`)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* 3. Transaction Status */}
+                        <div className="flex items-start gap-2">
+                          {verificationResult.checklist.isStatusSuccess ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5 stroke-[2.5]" />
+                          ) : (
+                            <X className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5 stroke-[2.5]" />
+                          )}
+                          <div className="flex-1">
+                            <span className="font-semibold text-charcoal-800">Payment Status: </span>
+                            <span className={verificationResult.checklist.isStatusSuccess ? 'text-emerald-700 font-medium' : 'text-rose-700 font-semibold'}>
+                              {verificationResult.checklist.statusDetail || (verificationResult.checklist.isStatusSuccess ? 'Completed successfully' : 'Not completed / failed / pending')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* 4. 12-digit UTR */}
+                        <div className="flex items-start gap-2">
+                          {verificationResult.checklist.isUtrFound ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5 stroke-[2.5]" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                          )}
+                          <div className="flex-1">
+                            <span className="font-semibold text-charcoal-800">UPI Ref / UTR: </span>
+                            <span className={verificationResult.checklist.isUtrFound ? 'text-emerald-700 font-medium font-mono' : 'text-charcoal-600'}>
+                              {verificationResult.checklist.utrDetail || 'Not detected on screenshot'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* 5. Payee match if available */}
+                        {verificationResult.checklist.recipientDetail && (
+                          <div className="flex items-start gap-2">
+                            {verificationResult.checklist.isRecipientMatch !== false ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5 stroke-[2.5]" />
+                            ) : (
+                              <X className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5 stroke-[2.5]" />
+                            )}
+                            <div className="flex-1">
+                              <span className="font-semibold text-charcoal-800">Payee Match: </span>
+                              <span className={verificationResult.checklist.isRecipientMatch !== false ? 'text-emerald-700 font-medium' : 'text-rose-700 font-semibold'}>
+                                {verificationResult.checklist.recipientDetail}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* How to resolve */}
+                    <div className="p-2 bg-rose-100/60 rounded-lg text-[10px] text-rose-800 flex items-start gap-1.5">
+                      <span className="font-bold">What to do:</span>
+                      <span>Please open Google Pay, PhonePe, or Paytm, go to your Transaction History, open the completed transfer of {formatCurrency(parsedAmountPaise)}, and upload that screenshot.</span>
+                    </div>
                   </div>
                 )}
 
+                {/* Verification Successful Card with Checklist */}
                 {verificationResult && verificationResult.isValid && !isVerifying && (
-                  <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl space-y-1 text-xs text-emerald-950 animate-pop-in">
+                  <div className="p-3.5 bg-emerald-50 border-2 border-emerald-300 rounded-2xl space-y-2 text-xs text-emerald-950 animate-pop-in">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-emerald-800 flex items-center gap-1.5">
+                      <span className="font-bold text-emerald-800 flex items-center gap-1.5 text-sm">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                         {verificationResult.engineUsed === 'gemini-ai' ? 'Verified by Gemini AI' : 'Verified Payment Screenshot'}
                       </span>
@@ -652,13 +766,33 @@ export const RecordSettlementModal: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-emerald-800">
+                    
+                    <p className="text-xs font-semibold text-emerald-900">
                       {verificationResult.summary}
                     </p>
-                    {verificationResult.detectedUtr && (
-                      <p className="text-[10px] font-mono text-emerald-700 font-semibold">
-                        Auto-detected UTR: {verificationResult.detectedUtr}
-                      </p>
+
+                    {/* Checklist */}
+                    {verificationResult.checklist && (
+                      <div className="bg-white/80 rounded-xl p-2.5 border border-emerald-200 space-y-1.5 text-[11px]">
+                        <div className="flex items-center gap-2 text-emerald-800">
+                          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
+                          <span><strong>Receipt:</strong> {verificationResult.checklist.receiptDetail || 'Authentic payment confirmation'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-emerald-800">
+                          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
+                          <span><strong>Amount:</strong> {verificationResult.checklist.amountDetail || `Exact match`}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-emerald-800">
+                          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
+                          <span><strong>Status:</strong> {verificationResult.checklist.statusDetail || 'Completed successfully'}</span>
+                        </div>
+                        {verificationResult.detectedUtr && (
+                          <div className="flex items-center gap-2 text-emerald-800">
+                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
+                            <span className="font-mono"><strong>UPI Ref / UTR:</strong> {verificationResult.detectedUtr}</span>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}

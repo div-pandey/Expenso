@@ -8,6 +8,19 @@
  * 4. Reject fake screenshots, memes, random photos, failed transactions, or wrong amounts
  */
 
+export interface VerificationChecklist {
+  isReceipt: boolean;
+  receiptDetail: string;
+  isAmountMatch: boolean;
+  amountDetail: string;
+  isStatusSuccess: boolean;
+  statusDetail: string;
+  isUtrFound: boolean;
+  utrDetail: string;
+  isRecipientMatch?: boolean;
+  recipientDetail?: string;
+}
+
 export interface VerificationResult {
   isValid: boolean;
   confidence: number;
@@ -18,6 +31,8 @@ export interface VerificationResult {
   paymentStatus?: 'successful' | 'failed' | 'pending' | 'not_a_receipt';
   rejectionReason?: string;
   summary: string;
+  issues: string[];
+  checklist: VerificationChecklist;
   engineUsed: 'gemini-ai' | 'smart-vision-heuristic';
 }
 
@@ -101,6 +116,17 @@ export async function verifyPaymentProofWithGemini(params: {
         confidence: 0,
         rejectionReason: `AI verification could not be completed: ${msg}. Please ensure your screenshot is a valid receipt.`,
         summary: 'AI Verification Error',
+        issues: [`AI verification could not be completed: ${msg}`],
+        checklist: {
+          isReceipt: false,
+          receiptDetail: 'Could not connect to AI service',
+          isAmountMatch: false,
+          amountDetail: `Required repayment: ₹${expectedRupees}`,
+          isStatusSuccess: false,
+          statusDetail: 'Unverified',
+          isUtrFound: false,
+          utrDetail: 'Unverified',
+        },
         engineUsed: 'gemini-ai',
       };
     }
@@ -143,17 +169,28 @@ async function runGeminiVisionAnalysis(params: {
 
   const prompt = `You are an automated fraud detection AI specialized in verifying Indian UPI payment confirmation screenshots (Google Pay, PhonePe, Paytm, BHIM, Navi, Cred, Axis, HDFC, SBI, etc.).
 
-Analyze this uploaded image carefully:
+Analyze this uploaded image carefully against the required repayment details:
 - Required payment amount: ₹${expectedRupees}
-- Expected recipient: "${recipientName}" ${recipientUpi ? `(${recipientUpi})` : ''}
-${expectedUtr ? `- User entered UTR reference: "${expectedUtr}"` : ''}
+- Expected recipient name: "${recipientName}" ${recipientUpi ? `(${recipientUpi})` : ''}
+${expectedUtr ? `- Expected 12-digit UPI UTR / Reference ID: "${expectedUtr}"` : ''}
 
 Strict Verification Rules:
-1. Is this a genuine, completed payment confirmation screenshot from a UPI/banking app? Reject selfies, photos of people, nature, memes, random documents, payment request screens, QR scanner screens, or incomplete carts.
-2. What is the status of the transaction? It MUST be completed/successful (e.g. "Paid successfully", "Payment of ₹X to Y successful", "Transaction successful"). Reject if status is "Failed", "Processing", "Declined", or "Pending".
-3. Check the transferred amount in rupees: Does it match the required amount of ₹${expectedRupees}? If the screenshot shows a different amount, it must be rejected with amountMatches = false.
-4. Extract the 12-digit UPI UTR / Transaction Reference ID (usually 12 digits, e.g. 431289012345 or UPI Ref ID).
-5. If the user provided a UTR, verify whether it matches the one in the image.
+1. SCREENSHOT AUTHENTICITY:
+   - Is this a genuine, completed payment confirmation screenshot from a UPI or banking app?
+   - Reject if it is a photo of a person, ID card/badge, face selfie, landscape, meme, random document, shopping cart, or payment request/scanner screen.
+2. PAYMENT STATUS:
+   - The transaction MUST be completed/successful (e.g. "Paid successfully", "Payment of ₹X to Y successful", "Transaction successful").
+   - Reject if status is "Failed", "Processing", "Declined", or "Pending".
+3. AMOUNT VERIFICATION:
+   - Check the transferred amount in rupees: Does it match the required amount of ₹${expectedRupees}?
+   - If the screenshot shows a different amount (e.g. ₹500 instead of ₹600) or amount is missing/cut off, mark isAmountMatch = false.
+4. 12-DIGIT UPI REFERENCE / UTR:
+   - Extract the 12-digit UPI UTR / Transaction Reference ID (usually 12 digits, e.g. 431289012345, UPI Ref ID).
+   - If user provided an expected UTR ("${expectedUtr || ''}"), verify whether it matches the one in the image.
+5. RECIPIENT MATCH:
+   - Check if the recipient name or UPI ID on the receipt matches "${recipientName}" or "${recipientUpi || ''}".
+
+Build a specific checklist and a list of exact issues explaining what is missing, wrong, or why the screenshot is rejected.
 
 Respond ONLY with a valid JSON object following this exact schema, with no markdown code fences or backticks:
 {
@@ -164,8 +201,23 @@ Respond ONLY with a valid JSON object following this exact schema, with no markd
   "detectedAmount": number or null,
   "amountMatches": boolean,
   "detectedUtr": string or null,
+  "utrMatches": boolean or null,
   "detectedRecipient": string or null,
+  "recipientMatches": boolean or null,
+  "issues": string[],
   "rejectionReason": string or null,
+  "checklist": {
+    "isReceipt": boolean,
+    "receiptDetail": string,
+    "isAmountMatch": boolean,
+    "amountDetail": string,
+    "isStatusSuccess": boolean,
+    "statusDetail": string,
+    "isUtrFound": boolean,
+    "utrDetail": string,
+    "isRecipientMatch": boolean,
+    "recipientDetail": string
+  },
   "summary": string
 }`;
 
@@ -223,20 +275,71 @@ Respond ONLY with a valid JSON object following this exact schema, with no markd
       const cleaned = rawText.replace(/^```json\s*/, '').replace(/```\s*$/, '').trim();
       const parsed = JSON.parse(cleaned);
 
-      const isValid = Boolean(parsed.isValid && parsed.amountMatches && parsed.paymentStatus === 'successful');
-      let rejectionReason = parsed.rejectionReason;
+      const isValid = Boolean(
+        parsed.isValid &&
+        parsed.amountMatches &&
+        parsed.paymentStatus === 'successful' &&
+        (parsed.checklist?.isReceipt !== false)
+      );
 
+      const checklist: VerificationChecklist = {
+        isReceipt: parsed.checklist?.isReceipt ?? (parsed.paymentStatus !== 'not_a_receipt'),
+        receiptDetail: parsed.checklist?.receiptDetail || (parsed.paymentStatus === 'not_a_receipt'
+          ? 'Not an authentic payment receipt screenshot'
+          : `Valid ${parsed.detectedApp || 'UPI'} payment confirmation`),
+        isAmountMatch: parsed.checklist?.isAmountMatch ?? Boolean(parsed.amountMatches),
+        amountDetail: parsed.checklist?.amountDetail || (parsed.amountMatches
+          ? `₹${expectedRupees} matches required repayment`
+          : parsed.detectedAmount
+            ? `Screenshot shows ₹${parsed.detectedAmount} (expected ₹${expectedRupees})`
+            : `Payment amount could not be verified (expected ₹${expectedRupees})`),
+        isStatusSuccess: parsed.checklist?.isStatusSuccess ?? (parsed.paymentStatus === 'successful'),
+        statusDetail: parsed.checklist?.statusDetail || (parsed.paymentStatus === 'successful'
+          ? 'Payment completed successfully'
+          : parsed.paymentStatus === 'failed'
+            ? 'Transaction marked Failed or Declined'
+            : parsed.paymentStatus === 'pending'
+              ? 'Transaction is Pending or Processing'
+              : 'Transaction not completed'),
+        isUtrFound: parsed.checklist?.isUtrFound ?? Boolean(parsed.detectedUtr),
+        utrDetail: parsed.checklist?.utrDetail || (parsed.detectedUtr
+          ? `Ref ID: ${parsed.detectedUtr}`
+          : '12-digit UPI reference (UTR) not clearly visible on screenshot'),
+        isRecipientMatch: parsed.checklist?.isRecipientMatch ?? parsed.recipientMatches ?? undefined,
+        recipientDetail: parsed.checklist?.recipientDetail || (parsed.detectedRecipient
+          ? `Recipient: ${parsed.detectedRecipient}`
+          : undefined),
+      };
+
+      const issues: string[] = Array.isArray(parsed.issues) && parsed.issues.length > 0
+        ? [...parsed.issues]
+        : [];
+
+      if (!checklist.isReceipt && !issues.some((i: string) => i.toLowerCase().includes('receipt'))) {
+        issues.push(checklist.receiptDetail);
+      }
+      if (!checklist.isAmountMatch && !issues.some((i: string) => i.toLowerCase().includes('amount'))) {
+        issues.push(checklist.amountDetail);
+      }
+      if (!checklist.isStatusSuccess && !issues.some((i: string) => i.toLowerCase().includes('status') || i.toLowerCase().includes('failed') || i.toLowerCase().includes('pending'))) {
+        issues.push(checklist.statusDetail);
+      }
+      if (expectedUtr && parsed.utrMatches === false) {
+        issues.push(`Entered UTR "${expectedUtr}" does not match screenshot reference "${parsed.detectedUtr || 'none'}"`);
+      }
+
+      let rejectionReason = parsed.rejectionReason;
       if (!isValid && !rejectionReason) {
-        if (parsed.paymentStatus === 'failed') {
-          rejectionReason = 'The screenshot shows a Failed or Declined transaction.';
-        } else if (parsed.paymentStatus === 'pending') {
-          rejectionReason = 'The transaction is still pending/processing. Please upload completed confirmation.';
-        } else if (parsed.paymentStatus === 'not_a_receipt') {
-          rejectionReason = 'The image does not appear to be an authentic payment confirmation receipt.';
-        } else if (!parsed.amountMatches) {
+        if (issues.length > 0) {
+          rejectionReason = issues.join('. ');
+        } else if (!checklist.isReceipt) {
+          rejectionReason = 'The uploaded image does not appear to be an authentic payment confirmation receipt.';
+        } else if (!checklist.isAmountMatch) {
           rejectionReason = `The amount in the screenshot (₹${parsed.detectedAmount ?? 'unknown'}) does not match the required repayment of ₹${expectedRupees}.`;
+        } else if (!checklist.isStatusSuccess) {
+          rejectionReason = 'The transaction is not completed (failed or pending).';
         } else {
-          rejectionReason = 'Could not verify this payment screenshot. Please ensure it is a clear, authentic receipt.';
+          rejectionReason = 'Verification failed. Please upload a clear, completed payment confirmation receipt.';
         }
       }
 
@@ -249,6 +352,8 @@ Respond ONLY with a valid JSON object following this exact schema, with no markd
         detectedRecipient: parsed.detectedRecipient || undefined,
         paymentStatus: parsed.paymentStatus,
         rejectionReason,
+        issues,
+        checklist,
         summary: parsed.summary || (isValid ? `Verified ₹${expectedRupees} payment via ${parsed.detectedApp || 'UPI'}` : 'Verification failed'),
         engineUsed: 'gemini-ai',
       };
@@ -270,7 +375,7 @@ async function runSmartVisionInspection(params: {
   recipientName: string;
   expectedUtr?: string;
 }): Promise<VerificationResult> {
-  const { imageDataUrl } = params;
+  const { imageDataUrl, expectedRupees, expectedUtr } = params;
 
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return {
@@ -278,6 +383,17 @@ async function runSmartVisionInspection(params: {
       confidence: 0,
       rejectionReason: 'Gemini AI key required to verify payment screenshot authenticity.',
       summary: 'AI Verification Required',
+      issues: ['Gemini AI verification required to inspect payment screenshot.'],
+      checklist: {
+        isReceipt: false,
+        receiptDetail: 'Unverified',
+        isAmountMatch: false,
+        amountDetail: `Expected ₹${expectedRupees}`,
+        isStatusSuccess: false,
+        statusDetail: 'Unverified',
+        isUtrFound: false,
+        utrDetail: 'Unverified',
+      },
       engineUsed: 'smart-vision-heuristic',
     };
   }
@@ -297,6 +413,17 @@ async function runSmartVisionInspection(params: {
           confidence: 0.1,
           rejectionReason: `Image resolution is too low (${width}x${height}). Real payment screenshots are at least 300x300.`,
           summary: 'Resolution too low',
+          issues: [`Image resolution is too low (${width}x${height}). Please upload an uncompressed, clear screenshot.`],
+          checklist: {
+            isReceipt: false,
+            receiptDetail: `Low resolution (${width}x${height})`,
+            isAmountMatch: false,
+            amountDetail: `Cannot read ₹${expectedRupees} amount clearly`,
+            isStatusSuccess: false,
+            statusDetail: 'Unreadable',
+            isUtrFound: false,
+            utrDetail: 'Unreadable',
+          },
           engineUsed: 'smart-vision-heuristic',
         });
         return;
@@ -310,6 +437,17 @@ async function runSmartVisionInspection(params: {
           confidence: 0.15,
           rejectionReason: `Image is in wide landscape format (${width}x${height}). Mobile payment receipts must be portrait or square screenshots.`,
           summary: 'Invalid landscape orientation',
+          issues: ['Image is wide landscape format, not a standard portrait mobile payment screenshot.'],
+          checklist: {
+            isReceipt: false,
+            receiptDetail: `Wide landscape photo (${width}x${height})`,
+            isAmountMatch: false,
+            amountDetail: `Expected ₹${expectedRupees}`,
+            isStatusSuccess: false,
+            statusDetail: 'Not a mobile payment receipt',
+            isUtrFound: false,
+            utrDetail: 'None',
+          },
           engineUsed: 'smart-vision-heuristic',
         });
         return;
@@ -328,6 +466,17 @@ async function runSmartVisionInspection(params: {
             isValid: true,
             confidence: 0.85,
             summary: `Receipt image accepted (${width}x${height})`,
+            issues: [],
+            checklist: {
+              isReceipt: true,
+              receiptDetail: `Mobile format (${width}x${height})`,
+              isAmountMatch: true,
+              amountDetail: `Repayment amount ₹${expectedRupees}`,
+              isStatusSuccess: true,
+              statusDetail: 'Receipt accepted',
+              isUtrFound: Boolean(expectedUtr),
+              utrDetail: expectedUtr ? `Ref: ${expectedUtr}` : 'Self-reported',
+            },
             engineUsed: 'smart-vision-heuristic',
           });
           return;
@@ -390,6 +539,20 @@ async function runSmartVisionInspection(params: {
             confidence: 0.1,
             rejectionReason: 'The uploaded image is solid color or blank. Please upload a genuine payment receipt.',
             summary: 'Blank or solid color image',
+            issues: [
+              'The uploaded image is solid color or completely blank.',
+              'No payment amount, transaction status, or UTR reference found.',
+            ],
+            checklist: {
+              isReceipt: false,
+              receiptDetail: 'Blank or solid color image',
+              isAmountMatch: false,
+              amountDetail: 'Amount not found',
+              isStatusSuccess: false,
+              statusDetail: 'Status not found',
+              isUtrFound: false,
+              utrDetail: 'UTR not found',
+            },
             engineUsed: 'smart-vision-heuristic',
           });
           return;
@@ -406,6 +569,21 @@ async function runSmartVisionInspection(params: {
             confidence: 0.2,
             rejectionReason: 'The uploaded image does not appear to be a valid payment receipt (no UPI or banking transaction elements detected). Please upload an authentic screenshot of your completed payment.',
             summary: 'Not a payment receipt',
+            issues: [
+              'Image does not match standard UPI payment receipt structure.',
+              'No banking app colors, amount badge, or transaction elements detected.',
+              'Appears to be a personal photo, ID card, or document instead of a payment confirmation.',
+            ],
+            checklist: {
+              isReceipt: false,
+              receiptDetail: 'No UPI or banking interface detected (photo or document)',
+              isAmountMatch: false,
+              amountDetail: `Could not verify ₹${expectedRupees} amount`,
+              isStatusSuccess: false,
+              statusDetail: 'No successful transaction badge found',
+              isUtrFound: false,
+              utrDetail: 'No 12-digit UTR reference found',
+            },
             engineUsed: 'smart-vision-heuristic',
           });
           return;
@@ -418,6 +596,20 @@ async function runSmartVisionInspection(params: {
             confidence: 0.2,
             rejectionReason: 'Image does not match standard UPI payment receipt structure. Please upload a screenshot of your payment confirmation.',
             summary: 'Unrecognized screenshot format',
+            issues: [
+              'Unrecognized image structure.',
+              'Required transaction fields (Amount, UTR, Status) could not be detected.',
+            ],
+            checklist: {
+              isReceipt: false,
+              receiptDetail: 'Unrecognized image structure',
+              isAmountMatch: false,
+              amountDetail: `Expected ₹${expectedRupees}`,
+              isStatusSuccess: false,
+              statusDetail: 'Unrecognized',
+              isUtrFound: false,
+              utrDetail: 'Unrecognized',
+            },
             engineUsed: 'smart-vision-heuristic',
           });
           return;
@@ -426,16 +618,40 @@ async function runSmartVisionInspection(params: {
         resolve({
           isValid: false,
           confidence: 0.2,
-          rejectionReason: 'Gemini AI verification is required to verify receipts and cross-check payment amounts. Please configure your free Gemini API key to activate verification.',
-          summary: 'Gemini API Key Required',
+          rejectionReason: 'Gemini AI key required to verify receipts and cross-check payment amounts.',
+          summary: 'Gemini AI Key Required',
+          issues: [
+            `Gemini AI verification required to cross-check ₹${expectedRupees} amount and 12-digit UTR reference.`,
+          ],
+          checklist: {
+            isReceipt: true,
+            receiptDetail: 'UPI layout detected',
+            isAmountMatch: false,
+            amountDetail: `Requires AI verification for ₹${expectedRupees}`,
+            isStatusSuccess: false,
+            statusDetail: 'Requires AI verification',
+            isUtrFound: false,
+            utrDetail: 'Requires AI verification',
+          },
           engineUsed: 'smart-vision-heuristic',
         });
       } catch {
         resolve({
           isValid: false,
           confidence: 0,
-          rejectionReason: 'Gemini AI verification is required to verify payment receipts.',
+          rejectionReason: 'Gemini AI key required to verify payment receipts.',
           summary: 'Verification required',
+          issues: ['Gemini AI verification required to verify payment receipts.'],
+          checklist: {
+            isReceipt: false,
+            receiptDetail: 'Unverified',
+            isAmountMatch: false,
+            amountDetail: `Expected ₹${expectedRupees}`,
+            isStatusSuccess: false,
+            statusDetail: 'Unverified',
+            isUtrFound: false,
+            utrDetail: 'Unverified',
+          },
           engineUsed: 'smart-vision-heuristic',
         });
       }
@@ -447,6 +663,17 @@ async function runSmartVisionInspection(params: {
         confidence: 0,
         rejectionReason: 'Failed to load image file. Please upload a valid PNG, JPG, or WebP screenshot.',
         summary: 'Corrupted or unreadable image file',
+        issues: ['Image file could not be loaded. Please upload a valid PNG, JPG, or WebP file.'],
+        checklist: {
+          isReceipt: false,
+          receiptDetail: 'Unreadable image file',
+          isAmountMatch: false,
+          amountDetail: `Expected ₹${expectedRupees}`,
+          isStatusSuccess: false,
+          statusDetail: 'Unreadable',
+          isUtrFound: false,
+          utrDetail: 'Unreadable',
+        },
         engineUsed: 'smart-vision-heuristic',
       });
     };
