@@ -1575,6 +1575,45 @@ export const backendService = {
     }
   },
 
+  async syncNotificationToCloud(notif: InAppNotification): Promise<void> {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      for (const uid of [notif.userId, notif.actorId]) {
+        if (!uid) continue;
+        const u = sandboxBackend.findUserById(uid);
+        if (u) {
+          await supabase.from('profiles').upsert({
+            id: u.id,
+            email: u.email,
+            full_name: u.fullName,
+            initials: u.initials,
+            avatar_color: u.avatarColor,
+            invite_code: u.inviteCode,
+            phone: u.phone || null,
+          }, { onConflict: 'id' });
+        }
+      }
+
+      await supabase.from('in_app_notifications').upsert({
+        id: notif.id,
+        user_id: notif.userId,
+        blend_id: notif.blendId || null,
+        type: notif.type,
+        title: notif.title,
+        message: notif.message,
+        settlement_id: notif.settlementId || null,
+        amount_paise: notif.amountPaise ? Number(notif.amountPaise) : null,
+        actor_id: notif.actorId,
+        proof_image_url: notif.proofImageUrl || null,
+        is_read: Boolean(notif.isRead),
+        is_handled: Boolean(notif.isHandled),
+        created_at: notif.createdAt,
+      }, { onConflict: 'id' });
+    } catch (err) {
+      console.warn('syncNotificationToCloud note:', err);
+    }
+  },
+
   // Expenses with Payer Enforcement & Bidirectional Auto-Reconciliation
   async getBlendExpenses(blendId: string): Promise<Expense[]> {
     if (isSupabaseConfigured && supabase) {
@@ -1801,6 +1840,24 @@ export const backendService = {
     const s = sandboxBackend.createSettlement(blendId, data);
     await this.syncSettlementToCloud(s);
 
+    if (data.status === 'proof_submitted') {
+      const recipientNotifs = sandboxBackend.getNotifications(s.toMemberId);
+      const notif = recipientNotifs.find(n => n.settlementId === s.id);
+      if (notif) {
+        await this.syncNotificationToCloud(notif);
+        if (internalChannel) {
+          try {
+            internalChannel.postMessage({ type: 'NOTIFICATION_SYNC', payload: { notification: notif } });
+          } catch {}
+        }
+        if (realtimeChannel) {
+          try {
+            realtimeChannel.send({ type: 'broadcast', event: 'NOTIFICATION_SYNC', payload: { notification: notif } });
+          } catch {}
+        }
+      }
+    }
+
     if (internalChannel) {
       try {
         internalChannel.postMessage({ type: 'SETTLEMENT_SYNC', payload: { settlement: s, blendId } });
@@ -1963,6 +2020,7 @@ export const backendService = {
     notes?: string
   ): Promise<Settlement> {
     const s = sandboxBackend.submitSettlementProof(settlementId, proofImageUrl, notes);
+    await this.syncSettlementToCloud(s);
 
     if (isSupabaseConfigured && supabase) {
       try {
@@ -1977,6 +2035,23 @@ export const backendService = {
           .eq('id', settlementId);
       } catch (err) {
         console.warn('Supabase submitSettlementProof note:', err);
+      }
+    }
+
+    // Sync in-app notification for recipient
+    const recipientNotifs = sandboxBackend.getNotifications(s.toMemberId);
+    const proofNotif = recipientNotifs.find(n => n.settlementId === settlementId && n.type === 'settlement_proof_submitted');
+    if (proofNotif) {
+      await this.syncNotificationToCloud(proofNotif);
+      if (internalChannel) {
+        try {
+          internalChannel.postMessage({ type: 'NOTIFICATION_SYNC', payload: { notification: proofNotif } });
+        } catch {}
+      }
+      if (realtimeChannel) {
+        try {
+          realtimeChannel.send({ type: 'broadcast', event: 'NOTIFICATION_SYNC', payload: { notification: proofNotif } });
+        } catch {}
       }
     }
 
@@ -2001,6 +2076,7 @@ export const backendService = {
     decisionNotes?: string
   ): Promise<Settlement> {
     const s = sandboxBackend.confirmSettlement(settlementId, decisionNotes);
+    await this.syncSettlementToCloud(s);
 
     if (isSupabaseConfigured && supabase) {
       try {
@@ -2015,6 +2091,23 @@ export const backendService = {
           .eq('id', settlementId);
       } catch (err) {
         console.warn('Supabase confirmSettlement note:', err);
+      }
+    }
+
+    // Sync confirmation notification for debtor
+    const debtorNotifs = sandboxBackend.getNotifications(s.fromMemberId);
+    const confirmNotif = debtorNotifs.find(n => n.settlementId === settlementId && n.type === 'settlement_confirmed');
+    if (confirmNotif) {
+      await this.syncNotificationToCloud(confirmNotif);
+      if (internalChannel) {
+        try {
+          internalChannel.postMessage({ type: 'NOTIFICATION_SYNC', payload: { notification: confirmNotif } });
+        } catch {}
+      }
+      if (realtimeChannel) {
+        try {
+          realtimeChannel.send({ type: 'broadcast', event: 'NOTIFICATION_SYNC', payload: { notification: confirmNotif } });
+        } catch {}
       }
     }
 
@@ -2039,6 +2132,7 @@ export const backendService = {
     reason: string
   ): Promise<Settlement> {
     const s = sandboxBackend.rejectSettlement(settlementId, reason);
+    await this.syncSettlementToCloud(s);
 
     if (isSupabaseConfigured && supabase) {
       try {
@@ -2053,6 +2147,23 @@ export const backendService = {
           .eq('id', settlementId);
       } catch (err) {
         console.warn('Supabase rejectSettlement note:', err);
+      }
+    }
+
+    // Sync rejection notification for debtor
+    const debtorNotifs = sandboxBackend.getNotifications(s.fromMemberId);
+    const rejectNotif = debtorNotifs.find(n => n.settlementId === settlementId && n.type === 'settlement_rejected');
+    if (rejectNotif) {
+      await this.syncNotificationToCloud(rejectNotif);
+      if (internalChannel) {
+        try {
+          internalChannel.postMessage({ type: 'NOTIFICATION_SYNC', payload: { notification: rejectNotif } });
+        } catch {}
+      }
+      if (realtimeChannel) {
+        try {
+          realtimeChannel.send({ type: 'broadcast', event: 'NOTIFICATION_SYNC', payload: { notification: rejectNotif } });
+        } catch {}
       }
     }
 
@@ -2151,8 +2262,11 @@ export const backendService = {
           .eq('user_id', userId)
           .order('created_at', { ascending: false });
 
+        const cloudNotifIds = new Set<string>();
+
         if (!error && data && data.length > 0) {
           for (const n of data) {
+            cloudNotifIds.add(n.id);
             sandboxBackend.addNotification({
               id: n.id,
               userId: n.user_id,
@@ -2169,6 +2283,51 @@ export const backendService = {
               createdAt: n.created_at,
             });
           }
+        }
+
+        // Auto-reconcile pending proof settlements to guarantee lender notification exists
+        const { data: pendingSettlements } = await supabase
+          .from('settlements')
+          .select('*')
+          .eq('to_user_id', userId)
+          .eq('status', 'proof_submitted');
+
+        if (pendingSettlements && Array.isArray(pendingSettlements)) {
+          for (const ps of pendingSettlements) {
+            const existingNotifs = sandboxBackend.getNotifications(userId);
+            if (!existingNotifs.some(n => n.settlementId === ps.id)) {
+              const fromUser = sandboxBackend.findUserById(ps.from_user_id);
+              const autoNotif: InAppNotification = {
+                id: `notif_${ps.id}`,
+                userId,
+                blendId: ps.blend_id,
+                type: 'settlement_proof_submitted',
+                title: 'Payment Proof Received',
+                message: `${fromUser?.fullName || 'Friend'} submitted payment proof of ₹${(Number(ps.amount_paise) / 100).toFixed(2)}.`,
+                settlementId: ps.id,
+                amountPaise: Number(ps.amount_paise),
+                actorId: ps.from_user_id,
+                proofImageUrl: ps.proof_image_url || undefined,
+                isRead: false,
+                isHandled: false,
+                createdAt: ps.updated_at || ps.created_at,
+              };
+              sandboxBackend.addNotification(autoNotif);
+              await this.syncNotificationToCloud(autoNotif);
+            }
+          }
+        }
+
+        // Reconcile local notifications to cloud
+        try {
+          const localNotifs = sandboxBackend.getNotifications(userId);
+          for (const localN of localNotifs) {
+            if (!cloudNotifIds.has(localN.id)) {
+              await this.syncNotificationToCloud(localN);
+            }
+          }
+        } catch (syncErr) {
+          console.warn('Local-to-cloud notification auto-reconcile note:', syncErr);
         }
       } catch (e) {
         console.warn('Supabase getNotifications note:', e);

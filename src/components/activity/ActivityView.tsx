@@ -22,7 +22,7 @@ type ActivityEntry =
   | { type: 'settlement'; id: string; date: string; data: Settlement };
 
 export const ActivityView: React.FC = () => {
-  const { expenses, settlements, members, currentBlend, openAddExpense, openBlendModal, openRecordSettlement } = useApp();
+  const { expenses, settlements, members, currentBlend, openAddExpense, openBlendModal } = useApp();
 
   const hasBlendFriends = (currentBlend?.memberCount ?? members.length) >= 2 || members.length >= 2;
 
@@ -139,13 +139,6 @@ export const ActivityView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto">
-          <button
-            onClick={() => openRecordSettlement()}
-            className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-subtle transition-all"
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Repayment</span>
-          </button>
           {hasBlendFriends ? (
             <button
               onClick={openAddExpense}

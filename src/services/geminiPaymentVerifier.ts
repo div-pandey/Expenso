@@ -262,7 +262,7 @@ async function runSmartVisionInspection(params: {
   recipientName: string;
   expectedUtr?: string;
 }): Promise<VerificationResult> {
-  const { imageDataUrl, expectedRupees, expectedUtr } = params;
+  const { imageDataUrl } = params;
 
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return {
@@ -402,14 +402,6 @@ async function runSmartVisionInspection(params: {
           });
           return;
         }
-
-        const detectedApp = greenSuccessPixels > 20
-          ? 'Google Pay / BHIM'
-          : purplePhonePePixels > 20
-          ? 'PhonePe'
-          : bluePaytmPixels > 20
-          ? 'Paytm / Bank UPI'
-          : 'UPI Banking App';
 
         resolve({
           isValid: false,

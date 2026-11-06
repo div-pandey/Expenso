@@ -61,6 +61,13 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
   const [customUpi, setCustomUpi] = useState<string>(() => {
     return toMember?.paymentMethod?.upiId || (typeof localStorage !== 'undefined' ? localStorage.getItem(`expenso_recipient_upi_${toMemberId}`) || '' : '');
   });
+
+  React.useEffect(() => {
+    if (toMemberId) {
+      const upi = toMember?.paymentMethod?.upiId || (typeof localStorage !== 'undefined' ? localStorage.getItem(`expenso_recipient_upi_${toMemberId}`) || '' : '');
+      if (upi) setCustomUpi(upi);
+    }
+  }, [toMemberId, toMember?.paymentMethod?.upiId]);
   const [showQrCode, setShowQrCode] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [utrNumber, setUtrNumber] = useState('');
@@ -194,18 +201,18 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
 
   const handleSubmitProof = async () => {
     if (!settlement) return;
-    if (proofFile && (!verificationResult || !verificationResult.isValid)) {
-      showToast(verificationResult?.rejectionReason || 'Please upload a verified payment screenshot', 'error');
+    if (!proofFile || !proofPreview) {
+      showToast('Please upload your payment confirmation screenshot', 'error');
       return;
     }
-    if (!proofPreview && !utrNumber.trim()) {
-      showToast('Please upload a screenshot or enter UPI Reference/UTR', 'error');
+    if (!verificationResult || !verificationResult.isValid) {
+      showToast(verificationResult?.rejectionReason || 'Please upload a verified payment screenshot', 'error');
       return;
     }
     setSubmitting(true);
     try {
       const notes = utrNumber.trim() ? `UPI Ref: ${utrNumber.trim()}` : undefined;
-      await submitSettlementProof(settlement.id, proofPreview || '', notes);
+      await submitSettlementProof(settlement.id, proofPreview, notes);
       setStep(3);
     } catch {
       // handled in context
@@ -545,7 +552,7 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
               <button
                 onClick={handleSubmitProof}
                 disabled={
-                  (proofFile ? (!verificationResult?.isValid || isVerifying) : !utrNumber.trim()) || submitting
+                  !proofFile || !proofPreview || isVerifying || !verificationResult?.isValid || submitting
                 }
                 className="btn-action-emerald group flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-sm font-bold rounded-xl shadow-card"
               >

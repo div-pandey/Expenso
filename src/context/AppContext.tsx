@@ -333,6 +333,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           reloadData(currentBlend.id);
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'in_app_notifications', filter: `user_id=eq.${currentUser.id}` },
+        () => {
+          reloadData(currentBlend.id);
+        }
+      )
       .subscribe();
 
     return () => {

@@ -84,9 +84,19 @@ function NotificationCard({
 
   const handleViewProof = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (settlement) {
-      onViewProof(settlement);
-    }
+    const targetSettlement: Settlement = settlement || {
+      id: notification.settlementId || '',
+      blendId: notification.blendId || '',
+      fromMemberId: notification.actorId,
+      toMemberId: notification.userId,
+      amountPaise: notification.amountPaise || 0,
+      date: notification.createdAt,
+      status: 'proof_submitted',
+      proofImageUrl: notification.proofImageUrl,
+      createdAt: notification.createdAt,
+      createdBy: notification.actorId,
+    };
+    onViewProof(targetSettlement);
     onRead(id);
   };
 
@@ -96,7 +106,7 @@ function NotificationCard({
   };
 
   const showViewProof =
-    type === 'settlement_proof_submitted' && !!settlement;
+    type === 'settlement_proof_submitted' && (!!settlement || !!notification.settlementId);
   const showViewButton =
     type === 'settlement_confirmed' || type === 'settlement_rejected';
 
