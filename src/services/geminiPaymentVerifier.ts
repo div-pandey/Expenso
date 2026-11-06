@@ -25,15 +25,15 @@ export interface VerificationResult {
  * Retrieves the Gemini API key from environment variable or localStorage.
  */
 export function getGeminiApiKey(): string {
-  const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) || '';
-  if (envKey && typeof envKey === 'string' && envKey.trim()) {
-    return envKey.trim();
-  }
   if (typeof localStorage !== 'undefined') {
     const localKey = localStorage.getItem('expenso_gemini_api_key');
     if (localKey && localKey.trim()) {
       return localKey.trim();
     }
+  }
+  const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) || '';
+  if (envKey && typeof envKey === 'string' && envKey.trim()) {
+    return envKey.trim();
   }
   return '';
 }
@@ -156,13 +156,17 @@ Respond ONLY with a valid JSON object following this exact schema, with no markd
 
   const models = ['gemini-1.5-flash', 'gemini-2.0-flash'];
   let lastError: unknown;
+  const cleanKey = apiKey.trim();
 
   for (const model of models) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`;
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': cleanKey,
+        },
         body: JSON.stringify({
           contents: [
             {

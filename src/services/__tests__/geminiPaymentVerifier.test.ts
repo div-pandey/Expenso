@@ -7,9 +7,13 @@ import {
 
 describe('Gemini AI Payment Proof Verification Engine', () => {
   let mockStorage: Record<string, string> = {};
+  const originalEnvKey = import.meta.env?.VITE_GEMINI_API_KEY;
 
   beforeEach(() => {
     mockStorage = {};
+    if (import.meta.env) {
+      import.meta.env.VITE_GEMINI_API_KEY = '';
+    }
     const localStorageMock = {
       getItem: vi.fn((key: string) => mockStorage[key] || null),
       setItem: vi.fn((key: string, value: string) => {
@@ -27,6 +31,9 @@ describe('Gemini AI Payment Proof Verification Engine', () => {
   });
 
   afterEach(() => {
+    if (import.meta.env && originalEnvKey !== undefined) {
+      import.meta.env.VITE_GEMINI_API_KEY = originalEnvKey;
+    }
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
