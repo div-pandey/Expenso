@@ -6,14 +6,25 @@ import { useApp } from '../../context/AppContext';
 import {
   ArrowRight,
   ShieldCheck,
-  QrCode,
   CheckCircle2,
   Smartphone,
+  Monitor,
+  Globe,
+  Download,
+  Sparkles,
+  Receipt,
+  FileSpreadsheet,
+  Keyboard,
   Lock,
   Check,
   X,
   ChevronDown,
   Zap,
+  ExternalLink,
+  Copy,
+  Layers,
+  RefreshCw,
+  Eye,
 } from 'lucide-react';
 
 interface LandingPageProps {
@@ -25,10 +36,13 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({
   onGetStarted,
   onLogin,
+  onExploreDemo,
 }) => {
   const { isLoggedIn, setShowLandingPage } = useApp();
   const [activeScenario, setActiveScenario] = useState<'metro_hop' | 'cab_pool' | 'chai_bus'>('metro_hop');
+  const [activeGalleryTab, setActiveGalleryTab] = useState<number>(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
 
   // Sticky Smart Header visibility state
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
@@ -43,10 +57,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       if (currentScrollY <= 25) {
         setIsHeaderVisible(true);
       } else if (delta > 4) {
-        // Scrolling down the page -> hide header to maximize reading view
         setIsHeaderVisible(false);
       } else if (delta < -4) {
-        // Scrolling up even a little -> reveal header for quick navigation
         setIsHeaderVisible(true);
       }
 
@@ -67,6 +79,91 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const toggleFaq = (index: number) => {
     setOpenFaq(prev => (prev === index ? null : index));
   };
+
+  const handleCopySampleCode = () => {
+    navigator.clipboard?.writeText('DIVY24');
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  // Gallery Showcase Data with real screenshots
+  const showcaseTabs = [
+    {
+      id: 'dashboard',
+      label: 'Home Dashboard',
+      icon: Layers,
+      title: 'Net Balance Hero & Period Commute Spend',
+      description:
+        'Live summary of who owes whom in your Blend. One-tap toggles between Today, This Week, This Month, and All Time commute spends, so you always know where transit money goes.',
+      image: '/gallery/01_dashboard_showcase.png',
+      badge: 'Live Dashboard',
+      highlights: [
+        'Instant Net Balance hero with INR integer paise precision',
+        'Spend filters: Today, This Week, This Month, All Time',
+        'Quick 6-character friend code invite bar',
+      ],
+    },
+    {
+      id: 'zero-circular',
+      label: 'Zero Circular Debts',
+      icon: Zap,
+      title: 'Greedy Balance Resolution Engine',
+      description:
+        'Stop chaotic circular debts. If Rahul owes Aman ₹40 and Aman owes Divyansh ₹40, Expenso collapses the cycle into a single transfer. Net balances across every group always sum to exactly ₹0.00.',
+      image: '/gallery/02_zero_circular_debts_showcase.png',
+      badge: 'Mathematical Engine',
+      highlights: [
+        'Greedy graph simplification eliminates redundant repayments',
+        'Debtor filtering: debtors only see who they actually owe',
+        'Pure lenders see a reassuring "You don\'t owe anything!"',
+      ],
+    },
+    {
+      id: 'ai-verification',
+      label: 'Gemini AI Verification',
+      icon: Sparkles,
+      title: 'Automated Receipt Inspection via Google Gemini AI',
+      description:
+        'When a friend uploads a UPI payment screenshot, Google Gemini AI Vision automatically reads the image to verify the payee name, amount transferred, and bank UTR reference before recipient approval.',
+      image: '/gallery/03_upi_settlement_ai_verification_showcase.png',
+      badge: 'Google Gemini AI',
+      highlights: [
+        'Inspects UPI UTR / Transaction Reference number automatically',
+        'Cross-verifies payee name and transferred amount in paise',
+        'Debt only clears after recipient taps "Received" inside Expenso',
+      ],
+    },
+    {
+      id: 'rapid-logging',
+      label: '10s Logging & CSV Export',
+      icon: FileSpreadsheet,
+      title: '10-Second Ride Logging + Direct CSV Export',
+      description:
+        'Record auto, metro, cab, and snack expenses in seconds right at the turnstile. Need a monthly hostel budget report? Export all filtered rides and settlements to CSV in 1 click.',
+      image: '/gallery/04_rapid_logging_and_csv_export_showcase.png',
+      badge: 'Speed & Budgeting',
+      highlights: [
+        'Fast 10-second entry with immutable payer locking',
+        'Export full activity history to CSV for Excel / Google Sheets',
+        'Keyboard shortcuts: Ctrl+N (New Ride), Ctrl+S (Settle Up)',
+      ],
+    },
+    {
+      id: 'cross-device',
+      label: 'Cross-Device Sync',
+      icon: RefreshCw,
+      title: 'Instant Multi-Device Realtime Sync',
+      description:
+        'Log a ride on your Android phone, review it on your Windows desktop, and check balances in any web browser. Powered by Supabase Realtime broadcast channels and 100% offline sandbox support.',
+      image: '/gallery/05_cross_device_sync_showcase.png',
+      badge: 'Android • Windows • Web',
+      highlights: [
+        'Simultaneous sync across Android (.apk), Windows (.exe), and Web',
+        'In-app push notifications for new rides & settlement proofs',
+        'Full offline sandbox mode for campus travel without network',
+      ],
+    },
+  ];
 
   const scenarios: Record<string, {
     title: string;
@@ -120,28 +217,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const faqs = [
     {
-      q: 'How is Expenso different from general bill-splitting apps like Splitwise?',
-      a: 'Splitwise and generic apps are built for roommates, dinners, and international trips with ads and endless features. Expenso is engineered specifically for fast-paced daily college travel in India: 10-second ride entry at metro escalators, native UPI deep links, zero circular debts, and a screenshot proof verification workflow that stops awkward "did you get it?" messages.',
+      q: 'Which platforms does Expenso support?',
+      a: 'Expenso is available as a native Android App (.apk), a native Windows Desktop App (.exe setup installer & standalone portable), and an instant Web App that runs in any modern browser. All platforms share the same account, blends, and real-time live sync.',
+    },
+    {
+      q: 'How do I install the Android APK on my phone?',
+      a: 'Download expenso.apk directly from this website. Tap the downloaded file on your phone. If prompted with "Install unknown apps", tap Settings -> Allow from this source, then tap Install. Expenso runs with full native performance and offline caching.',
+    },
+    {
+      q: 'How does the Windows Desktop App work?',
+      a: 'The Windows edition is available as an installer wizard (Expenso-Setup.exe) or a standalone executable (Expenso.exe). Built with high-DPI C# and Microsoft WebView2, it includes Windows tray integration, keyboard shortcuts (Ctrl+N, Ctrl+S), Ctrl+V screenshot clipboard pasting, and zero browser chrome.',
+    },
+    {
+      q: 'How does Gemini AI Payment Verification work?',
+      a: 'When a friend settles a debt and uploads a payment confirmation screenshot, Google Gemini AI Vision scans the image client-side to verify the recipient name, transferred amount, and the bank UTR / transaction ID. Outstanding debts only clear when the recipient reviews the proof and taps "Received".',
     },
     {
       q: 'Does Expenso connect to my bank account or ask for my UPI PIN?',
-      a: 'Never. Expenso never asks for your bank password, debit card details, or UPI PIN. When you upload a UPI QR, our in-browser engine decodes the standard UPI address client-side. Payments happen directly inside your trusted UPI apps (Google Pay, PhonePe, Paytm).',
+      a: 'Never. Expenso is not a payment gateway and never asks for bank account numbers, net banking passwords, or UPI PINs. When paying via UPI, Expenso deep-links directly into your official UPI apps (Google Pay, PhonePe, Paytm, BHIM) where authentication is handled by your bank.',
     },
     {
-      q: 'What if one friend missed the morning ride and only joined for the cab back?',
-      a: 'When logging an expense, you can check or uncheck individual members in 1 click. If only two of you took the morning auto, only those two split the ₹60. The third person owes ₹0 for that ride.',
+      q: 'Can I export my ride and repayment history to CSV for budgeting?',
+      a: 'Yes! Inside the Activity tab, click "Export CSV" to download a clean, formatted spreadsheet of all filtered rides, repayments, split shares, and notes for hostel accounting and monthly expense tracking.',
     },
     {
-      q: 'How does the screenshot payment verification actually work?',
-      a: 'When you tap "Settle Up", Expenso opens your UPI app with the exact amount and recipient details pre-filled. After transferring, attach a payment screenshot. Your debt is not cleared until the recipient checks their bank notification and taps "Received" inside Expenso, preventing false claims.',
-    },
-    {
-      q: 'Can I have multiple groups (e.g. daily metro crew vs hostel carpool)?',
-      a: 'Yes! Expenso features "Blends" — private friend groups. You can create one Blend for your daily North Campus metro gang and another for weekend hackathon travel or hostel carpooling.',
-    },
-    {
-      q: 'Is Expenso free for college students?',
-      a: 'Expenso is 100% free and completely ad-free. No paywalls, no subscription tiers, and no hidden transaction fees.',
+      q: 'Can I test Expenso offline without setting up an account or cloud backend?',
+      a: 'Yes! Expenso features a built-in multi-account Sandbox mode that runs 100% offline. You can test four pre-configured campus profiles (Divyansh, Rahul, Aman, Priya), create mock rides, test balance math, and verify repayments without any network connection.',
     },
   ];
 
@@ -153,7 +254,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           isHeaderVisible ? 'translate-y-0 shadow-sm' : '-translate-y-full'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-3.5 sm:px-8 lg:px-12 min-h-[60px] sm:min-h-[84px] py-2.5 sm:py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-8 lg:px-12 min-h-[60px] sm:min-h-[80px] py-2 sm:py-3.5 flex items-center justify-between">
           <div
             onClick={() => {
               if (isLoggedIn) {
@@ -162,18 +263,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }
             }}
-            className="cursor-pointer hover:opacity-90 active:scale-95 transition-all"
+            className="cursor-pointer hover:opacity-90 active:scale-95 transition-all flex items-center gap-3"
             title={isLoggedIn ? 'Return to Expenso Dashboard' : 'Expenso Home'}
           >
             <BrandWordmark size="md" />
+            <span className="hidden xl:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-brand-50 text-brand-800 border border-brand-200">
+              Web • Android • Windows
+            </span>
           </div>
 
-          <nav className="hidden md:flex items-center gap-7 text-sm font-bold text-charcoal-600">
-            <button onClick={() => scrollToSection('scenarios')} className="hover:text-charcoal-900 transition-colors">
-              Live Scenarios
+          <nav className="hidden lg:flex items-center gap-6 text-xs xl:text-sm font-bold text-charcoal-600">
+            <button onClick={() => scrollToSection('downloads')} className="hover:text-charcoal-900 transition-colors flex items-center gap-1 text-brand-800">
+              <Download className="w-3.5 h-3.5" />
+              <span>Get Apps</span>
             </button>
-            <button onClick={() => scrollToSection('how-it-works')} className="hover:text-charcoal-900 transition-colors">
-              How it works
+            <button onClick={() => scrollToSection('showcase')} className="hover:text-charcoal-900 transition-colors">
+              App Gallery
+            </button>
+            <button onClick={() => scrollToSection('features')} className="hover:text-charcoal-900 transition-colors">
+              Features
+            </button>
+            <button onClick={() => scrollToSection('scenarios')} className="hover:text-charcoal-900 transition-colors">
+              Commute Simulator
             </button>
             <button onClick={() => scrollToSection('comparison')} className="hover:text-charcoal-900 transition-colors">
               Why Expenso
@@ -203,7 +314,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </button>
                 <button
                   onClick={onGetStarted}
-                  className="btn-action-primary group relative overflow-hidden flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-brand-700 hover:bg-brand-800 text-white text-xs sm:text-sm font-bold rounded-xl shadow-card"
+                  className="btn-action-primary group relative overflow-hidden flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-brand-700 hover:bg-brand-800 text-white text-xs sm:text-sm font-bold rounded-xl shadow-card"
                 >
                   <span className="relative z-10">Get Started</span>
                   <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 relative z-10 group-hover:translate-x-1 transition-transform duration-200" />
@@ -216,26 +327,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </header>
 
       {/* Hero Section */}
-      <section className="pt-20 sm:pt-28 lg:pt-32 pb-16 px-4 sm:px-6 max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+      <section className="pt-20 sm:pt-28 lg:pt-32 pb-14 px-4 sm:px-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           {/* Hero Copy */}
-          <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-            <h1 className="text-3xl sm:text-5xl lg:text-5xl font-black text-charcoal-900 tracking-tight leading-[1.14]">
+          <div className="lg:col-span-7 space-y-5 text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Latest Release: Native Android APK & Windows Desktop</span>
+            </div>
+
+            <h1 className="text-3xl sm:text-5xl lg:text-[3.25rem] font-black text-charcoal-900 tracking-tight leading-[1.12]">
               Your rides. Your crew. <br className="hidden sm:inline" />
-              <span className="text-brand-700">No money confusion.</span>
+              <span className="text-brand-700">Zero money confusion.</span>
             </h1>
 
             <p className="text-sm sm:text-base text-charcoal-600 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-              Track every rickshaw, metro ride, cab, and transit snack with your college friends. Expenso logs rides in 10 seconds, eliminates circular debts, and coordinates verified UPI repayments with screenshot evidence.
+              Track shared autos, metros, cabs, and chai in 10 seconds. Built for college friends with integer paise precision, zero circular debts, Gemini AI payment verification, and 1-tap CSV budgeting.
             </p>
 
+            {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
               {isLoggedIn ? (
                 <button
                   onClick={() => setShowLandingPage(false)}
                   className="btn-action-primary group relative overflow-hidden w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-brand-700 hover:bg-brand-800 text-white text-sm font-bold rounded-xl shadow-elevated"
                 >
-                  <span className="relative z-10">Go to My Dashboard</span>
+                  <span className="relative z-10">Open My Dashboard</span>
                   <ArrowRight className="w-4 h-4 relative z-10 group-hover:translate-x-1.5 transition-transform duration-200" />
                   <div className="absolute inset-0 animate-shimmer pointer-events-none" />
                 </button>
@@ -244,31 +361,54 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   onClick={onGetStarted}
                   className="btn-action-primary group relative overflow-hidden w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-brand-700 hover:bg-brand-800 text-white text-sm font-bold rounded-xl shadow-elevated"
                 >
-                  <span className="relative z-10">Create free account</span>
+                  <Globe className="w-4 h-4 text-emerald-300" />
+                  <span className="relative z-10">Launch Web App</span>
                   <ArrowRight className="w-4 h-4 relative z-10 group-hover:translate-x-1.5 transition-transform duration-200" />
                   <div className="absolute inset-0 animate-shimmer pointer-events-none" />
                 </button>
               )}
 
               <button
-                onClick={() => scrollToSection('scenarios')}
-                className="btn-action-secondary group w-full sm:w-auto px-5 py-3.5 bg-white hover:bg-warm-100 text-charcoal-800 text-sm font-bold rounded-xl border border-warm-300 shadow-subtle flex items-center justify-center gap-1.5"
+                onClick={() => scrollToSection('downloads')}
+                className="btn-action-secondary group w-full sm:w-auto px-5 py-3.5 bg-white hover:bg-warm-100 text-charcoal-800 text-sm font-bold rounded-xl border border-warm-300 shadow-subtle flex items-center justify-center gap-2"
               >
-                <span>See commute simulator</span>
-                <ChevronDown className="w-3.5 h-3.5 text-charcoal-400 group-hover:translate-y-0.5 transition-transform duration-200" />
+                <Download className="w-4 h-4 text-brand-700" />
+                <span>Download Android & Windows</span>
               </button>
+            </div>
 
+            {/* Platform Badges */}
+            <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-2.5 text-xs text-charcoal-600 font-semibold">
+              <span className="text-[11px] uppercase tracking-wider text-charcoal-400 font-bold">Available On:</span>
+              <a href="/downloads/expenso.apk" download className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-warm-100 border border-warm-200 rounded-lg text-charcoal-800 shadow-xs transition-colors">
+                <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Android APK (5.3 MB)</span>
+              </a>
+              <a href="/downloads/Expenso-Setup.exe" download className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-warm-100 border border-warm-200 rounded-lg text-charcoal-800 shadow-xs transition-colors">
+                <Monitor className="w-3.5 h-3.5 text-sky-600" />
+                <span>Windows EXE (1.9 MB)</span>
+              </a>
+              <button
+                onClick={() => {
+                  if (onExploreDemo) onExploreDemo();
+                  else setShowLandingPage(false);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-warm-100 border border-warm-200 rounded-lg text-charcoal-800 shadow-xs transition-colors"
+              >
+                <Globe className="w-3.5 h-3.5 text-purple-600" />
+                <span>Web App (Browser)</span>
+              </button>
             </div>
 
             {/* Trust Badges */}
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-5 pt-3 text-xs text-charcoal-500">
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-5 pt-2 text-xs text-charcoal-500">
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>100% Free & No Ads</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>No Bank Passwords Needed</span>
+                <Sparkles className="w-4 h-4 text-brand-600 shrink-0" />
+                <span>Gemini AI Receipt Proofs</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -277,120 +417,479 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* App Preview Mockup */}
-          <div className="hidden sm:block lg:col-span-5">
-            <div className="w-full relative">
+          {/* Hero Visual Card / App Mockup */}
+          <div className="lg:col-span-5">
+            <div className="w-full relative max-w-md mx-auto">
+              <div className="absolute -inset-6 bg-brand-700/8 rounded-[40px] blur-3xl pointer-events-none" />
 
-              {/* Floating ambient glow */}
-              <div className="absolute -inset-8 bg-brand-700/6 rounded-[48px] blur-3xl pointer-events-none" />
-
-              {/* Main card */}
-              <div className="relative bg-[#FAF9F6] rounded-2xl border border-warm-300/80 shadow-elevated overflow-hidden">
-
-                {/* Faux app top-bar */}
-                <div className="bg-white border-b border-warm-200 px-5 py-3 flex items-center justify-between">
+              <div className="relative bg-[#FAF9F6] rounded-2xl border-2 border-warm-300 shadow-elevated overflow-hidden">
+                {/* Brand Bar */}
+                <div className="bg-white border-b border-warm-200 px-4 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <ExpensoLogo size="xs" />
                     <span className="font-black text-xs text-charcoal-900 tracking-tight">Expenso</span>
+                    <span className="text-[10px] bg-brand-100 text-brand-800 font-bold px-1.5 py-0.2 rounded">v1.0</span>
                   </div>
-                  <span className="text-[10px] text-charcoal-400 font-medium">commute tracker</span>
-                </div>
-
-                {/* Blend header */}
-                <div className="px-5 pt-4 pb-3">
-                  <p className="text-[10px] font-bold text-charcoal-400 uppercase tracking-widest mb-1">Blend</p>
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-black text-charcoal-900 text-base">North Campus Crew</h3>
-                    <div className="flex -space-x-2">
-                      {[
-                        { init: 'D', color: 'bg-brand-700' },
-                        { init: 'R', color: 'bg-amber-600' },
-                        { init: 'A', color: 'bg-sky-600' },
-                      ].map(({ init, color }, i) => (
-                        <div key={i} className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-black text-white ${color}`}>
-                          {init}
-                        </div>
-                      ))}
-                      <div className="w-6 h-6 rounded-full border-2 border-white bg-warm-300 flex items-center justify-center text-[9px] font-bold text-charcoal-600">+1</div>
-                    </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-[10px] text-charcoal-500 font-medium">Realtime Sync</span>
                   </div>
                 </div>
 
-                <div className="mx-5 border-t border-warm-200" />
-
-                {/* Today's rides */}
-                <div className="px-5 pt-4 pb-3 space-y-2.5">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-charcoal-400">Today's Rides</p>
-                  {[
-                    { category: 'erickshaw' as const, label: 'E-rickshaw to metro gate', sub: 'Divyansh paid', amt: '₹90',  split: '÷3 = ₹30 each', bg: 'bg-amber-50',   border: 'border-amber-200'   },
-                    { category: 'metro' as const, label: 'Yellow Line tokens',       sub: 'Rahul paid',    amt: '₹120', split: '÷3 = ₹40 each', bg: 'bg-sky-50',     border: 'border-sky-200'     },
-                    { category: 'cab' as const, label: 'Cab back from lab',        sub: 'Aman paid',     amt: '₹150', split: '÷3 = ₹50 each', bg: 'bg-emerald-50', border: 'border-emerald-200' },
-                  ].map((item, i) => (
-                    <div key={i} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl ${item.bg} border ${item.border}`}>
-                      <TransportIcon category={item.category} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-charcoal-900 truncate">{item.label}</p>
-                        <p className="text-[10px] text-charcoal-500 mt-0.5">
-                          {item.sub} · <span className="font-semibold text-charcoal-700">{item.split}</span>
-                        </p>
-                      </div>
-                      <span className="text-sm font-black text-charcoal-900 shrink-0">{item.amt}</span>
-                    </div>
-                  ))}
+                {/* Blend Header */}
+                <div className="p-4 bg-white/60 border-b border-warm-200/80">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold text-charcoal-400 uppercase tracking-widest">Active Blend</span>
+                    <button
+                      onClick={handleCopySampleCode}
+                      className="text-[10px] font-mono font-bold text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-md hover:bg-brand-100 flex items-center gap-1 transition-colors"
+                      title="Copy friend invite code"
+                    >
+                      <span>Code: DIVY24</span>
+                      {copiedCode ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                    </button>
+                  </div>
+                  <h3 className="font-black text-charcoal-900 text-base">North Campus Commuters</h3>
                 </div>
 
-                <div className="mx-5 border-t border-warm-200" />
-
-                {/* Who owes what */}
-                <div className="px-5 pt-4 pb-3">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-charcoal-400">Who Owes What</p>
-                    <span className="text-[9px] font-bold text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full">Auto-calculated</span>
+                {/* Spend summary preview */}
+                <div className="p-4 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-charcoal-500">Today's Commute Spend</span>
+                    <span className="font-black text-charcoal-900 text-sm">₹270</span>
                   </div>
+
                   <div className="space-y-2">
-                    {[
-                      { from: 'Rahul', to: 'Aman', amt: '₹10' },
-                      { from: 'Divyansh', to: 'Aman', amt: '₹20' },
-                    ].map((row, i) => (
-                      <div key={i} className="flex items-center justify-between bg-white border border-warm-200 rounded-xl px-3.5 py-2.5 text-xs">
-                        <span className="text-charcoal-700">
-                          <span className="font-bold text-charcoal-900">{row.from}</span>
-                          <span className="text-charcoal-400 mx-1.5">→</span>
-                          <span className="font-bold text-charcoal-900">{row.to}</span>
-                        </span>
-                        <span className="font-black text-rose-600">{row.amt}</span>
+                    <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-warm-200 text-xs">
+                      <div className="flex items-center gap-2.5">
+                        <TransportIcon category="erickshaw" size="sm" />
+                        <div>
+                          <p className="font-bold text-charcoal-900">E-Rickshaw to Metro</p>
+                          <p className="text-[10px] text-charcoal-500">Divyansh paid · ÷3 = ₹30 each</p>
+                        </div>
                       </div>
-                    ))}
+                      <span className="font-black text-charcoal-900">₹90</span>
+                    </div>
+
+                    <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-warm-200 text-xs">
+                      <div className="flex items-center gap-2.5">
+                        <TransportIcon category="metro" size="sm" />
+                        <div>
+                          <p className="font-bold text-charcoal-900">Yellow Line Tokens</p>
+                          <p className="text-[10px] text-charcoal-500">Rahul paid · ÷3 = ₹40 each</p>
+                        </div>
+                      </div>
+                      <span className="font-black text-charcoal-900">₹120</span>
+                    </div>
+                  </div>
+
+                  {/* AI & Mathematical Resolution banner */}
+                  <div className="p-3 bg-brand-50 border border-brand-200 rounded-xl space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-brand-900">
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-brand-700" />
+                        <span>Gemini AI Verified Settlement</span>
+                      </div>
+                      <span className="text-[10px] bg-brand-200/70 text-brand-900 px-1.5 py-0.5 rounded font-mono">UTR Verified</span>
+                    </div>
+                    <div className="text-[11px] text-charcoal-700 flex items-center justify-between">
+                      <span>Aman pays Divyansh:</span>
+                      <strong className="text-emerald-700 font-bold">₹20 (Cycle Settled)</strong>
+                    </div>
                   </div>
                 </div>
 
-                {/* UPI settle footer */}
-                <div className="mx-5 mb-5 mt-3 flex items-center justify-between bg-brand-700 rounded-xl px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <QrCode className="w-4 h-4 text-brand-200" />
-                    <span className="text-xs font-bold text-white">Settle via UPI</span>
-                  </div>
+                {/* Bottom App Bar */}
+                <div className="bg-warm-100/90 border-t border-warm-200 px-4 py-2.5 flex items-center justify-between text-xs">
+                  <span className="text-[11px] font-semibold text-charcoal-500">Integer Paise Precision</span>
                   <button
                     onClick={onGetStarted}
-                    className="text-[10px] font-black text-brand-900 bg-white px-3 py-1.5 rounded-lg hover:bg-brand-50 transition-colors"
+                    className="font-bold text-[11px] text-brand-800 hover:text-brand-900 flex items-center gap-1"
                   >
-                    Try it →
+                    <span>Try Interactive Web App</span>
+                    <ArrowRight className="w-3 h-3" />
                   </button>
                 </div>
-              </div>
-
-              {/* Floating badge — bottom right */}
-              <div className="absolute -bottom-3 -right-3 bg-white border border-warm-300 rounded-xl shadow-card px-3 py-2 flex items-center gap-2">
-                <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
-                <span className="text-xs font-bold text-charcoal-700">Zero circular debts</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* Official Downloads Section */}
+      <section id="downloads" className="py-16 sm:py-24 bg-white border-y border-warm-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
+            <span className="text-xs uppercase font-extrabold tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full border border-brand-200">
+              Cross-Platform Ready
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black text-charcoal-900 tracking-tight">
+              Download Expenso for your devices
+            </h2>
+            <p className="text-xs sm:text-sm text-charcoal-500">
+              Install native mobile and desktop apps with offline caching, high performance, and real-time live synchronization.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+            {/* 1. Android Mobile App */}
+            <div className="p-6 rounded-3xl bg-warm-50 border-2 border-warm-200 shadow-card flex flex-col justify-between hover:border-emerald-400 transition-all duration-200">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs">
+                    <Smartphone className="w-6 h-6" />
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                    Standalone APK
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-black text-charcoal-900">Android App</h3>
+                  <p className="text-xs text-charcoal-500 mt-0.5">Package: <code className="font-mono text-[11px]">expenso.apk</code></p>
+                </div>
+
+                <ul className="space-y-2 text-xs text-charcoal-600">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Native Capacitor container & fast launch</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Direct UPI app handoff (GPay, PhonePe, Paytm)</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>In-app notifications for split shares</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Touch-optimized for fast metro ride logging</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-6 space-y-3">
+                <a
+                  href="/downloads/expenso.apk"
+                  download="expenso.apk"
+                  className="btn-action-primary group w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-bold shadow-subtle flex items-center justify-center gap-2 transition-all"
+                >
+                  <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
+                  <span>Download APK (5.3 MB)</span>
+                </a>
+                <p className="text-[10px] text-charcoal-400 text-center">
+                  Android 8.0 or higher · Tap file to install
+                </p>
+              </div>
+            </div>
+
+            {/* 2. Windows Desktop App */}
+            <div className="p-6 rounded-3xl bg-warm-50 border-2 border-brand-300 shadow-card flex flex-col justify-between ring-2 ring-brand-500/10 hover:border-brand-500 transition-all duration-200">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-2xl bg-brand-100 text-brand-800 flex items-center justify-center shadow-xs">
+                    <Monitor className="w-6 h-6" />
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-brand-100 text-brand-900 border border-brand-300">
+                    Windows 10 / 11 Native
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-black text-charcoal-900">Windows Desktop App</h3>
+                  <p className="text-xs text-charcoal-500 mt-0.5">Setup Wizard + Standalone Portable EXE</p>
+                </div>
+
+                <ul className="space-y-2 text-xs text-charcoal-600">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-brand-600 shrink-0" />
+                    <span>Native C# + Microsoft WebView2 executable</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-brand-600 shrink-0" />
+                    <span>System tray icon with quick ride actions</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-brand-600 shrink-0" />
+                    <span>Clipboard paste (Ctrl+V) for screenshot proofs</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-brand-600 shrink-0" />
+                    <span>Keyboard shortcuts: Ctrl+N, Ctrl+S, Ctrl+B, F1</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-brand-600 shrink-0" />
+                    <span>1-click CSV Export for student budgeting</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-6 space-y-2">
+                <a
+                  href="/downloads/Expenso-Setup.exe"
+                  download="Expenso-Setup.exe"
+                  className="btn-action-primary group w-full py-3.5 px-4 bg-brand-700 hover:bg-brand-800 text-white rounded-xl text-xs sm:text-sm font-bold shadow-subtle flex items-center justify-center gap-2 transition-all"
+                >
+                  <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
+                  <span>Download Setup Wizard (1.9 MB)</span>
+                </a>
+                <div className="text-center">
+                  <a
+                    href="/downloads/Expenso.exe"
+                    download="Expenso.exe"
+                    className="text-[11px] font-bold text-charcoal-600 hover:text-brand-700 inline-flex items-center gap-1"
+                  >
+                    <span>Or download Portable Expenso.exe (1.1 MB)</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Instant Web App */}
+            <div className="p-6 rounded-3xl bg-warm-50 border-2 border-warm-200 shadow-card flex flex-col justify-between hover:border-purple-400 transition-all duration-200">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-800 flex items-center justify-center shadow-xs">
+                    <Globe className="w-6 h-6" />
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300">
+                    Zero Install
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-black text-charcoal-900">Instant Web App</h3>
+                  <p className="text-xs text-charcoal-500 mt-0.5">Runs in Chrome, Safari, Firefox & Edge</p>
+                </div>
+
+                <ul className="space-y-2 text-xs text-charcoal-600">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span>Instant access from any device or tablet</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span>Offline Sandbox mode with demo profiles</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span>Google & GitHub 1-click fast sign-in</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span>Live Supabase cloud sync across team</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-6 space-y-3">
+                <button
+                  onClick={() => {
+                    if (isLoggedIn) setShowLandingPage(false);
+                    else onGetStarted();
+                  }}
+                  className="btn-action-primary group w-full py-3.5 px-4 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs sm:text-sm font-bold shadow-subtle flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Globe className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                  <span>Launch Web App</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </button>
+                <p className="text-[10px] text-charcoal-400 text-center">
+                  Runs directly in your browser with zero installation
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Visual Picture Showcase Gallery */}
+      <section id="showcase" className="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
+          <span className="text-xs uppercase font-extrabold tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full border border-brand-200">
+            Interactive Product Showcase
+          </span>
+          <h2 className="text-2xl sm:text-4xl font-black text-charcoal-900 tracking-tight">
+            See Expenso in action
+          </h2>
+          <p className="text-xs sm:text-sm text-charcoal-500">
+            Explore actual app screens from the live desktop and mobile versions.
+          </p>
+        </div>
+
+        {/* Tab selection buttons */}
+        <div className="flex overflow-x-auto no-scrollbar justify-start sm:justify-center gap-2 pb-4 mb-8">
+          {showcaseTabs.map((tab, idx) => {
+            const Icon = tab.icon;
+            const isActive = activeGalleryTab === idx;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveGalleryTab(idx)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  isActive
+                    ? 'bg-brand-700 text-white shadow-card scale-102'
+                    : 'bg-white text-charcoal-600 hover:bg-warm-100 hover:text-charcoal-900 border border-warm-200'
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-brand-700'}`} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Showcase Display Card */}
+        <div className="bg-white rounded-3xl border-2 border-warm-200 shadow-elevated overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 sm:p-8 items-center">
+            {/* Left Content / Annotations */}
+            <div className="lg:col-span-5 space-y-4">
+              <span className="text-[10px] font-black uppercase tracking-wider text-brand-700 bg-brand-50 border border-brand-200 px-2.5 py-1 rounded-full">
+                {showcaseTabs[activeGalleryTab].badge}
+              </span>
+
+              <h3 className="text-xl sm:text-2xl font-black text-charcoal-900 tracking-tight">
+                {showcaseTabs[activeGalleryTab].title}
+              </h3>
+
+              <p className="text-xs sm:text-sm text-charcoal-600 leading-relaxed">
+                {showcaseTabs[activeGalleryTab].description}
+              </p>
+
+              <div className="pt-2 space-y-2">
+                <p className="text-[11px] font-bold text-charcoal-400 uppercase tracking-widest">Key Highlights</p>
+                {showcaseTabs[activeGalleryTab].highlights.map((h, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs text-charcoal-700 font-medium">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>{h}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-4 flex items-center gap-3">
+                <button
+                  onClick={onGetStarted}
+                  className="px-4 py-2.5 bg-brand-700 hover:bg-brand-800 text-white text-xs font-bold rounded-xl shadow-subtle flex items-center gap-1.5 transition-all"
+                >
+                  <span>Try It in Web App</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <a
+                  href="#downloads"
+                  className="px-4 py-2.5 bg-warm-100 hover:bg-warm-200 text-charcoal-800 text-xs font-bold rounded-xl transition-all"
+                >
+                  Get Native Apps
+                </a>
+              </div>
+            </div>
+
+            {/* Right Visual Screenshot */}
+            <div className="lg:col-span-7">
+              <div className="rounded-2xl border-2 border-warm-200 shadow-card overflow-hidden bg-warm-100 relative group">
+                <img
+                  src={showcaseTabs[activeGalleryTab].image}
+                  alt={showcaseTabs[activeGalleryTab].title}
+                  className="w-full h-auto object-cover transform transition-transform duration-300 group-hover:scale-102"
+                />
+                <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 pointer-events-none">
+                  <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Verified Screenshot</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature Deep Dive Grid */}
+      <section id="features" className="py-16 sm:py-24 bg-warm-100/60 border-y border-warm-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
+            <span className="text-xs uppercase font-extrabold tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full border border-brand-200">
+              Engineered For Campus Commutes
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black text-charcoal-900 tracking-tight">
+              Powerful features you won&apos;t find in generic splitters
+            </h2>
+            <p className="text-xs sm:text-sm text-charcoal-500">
+              Every detail is designed around college friends traveling together on autos, metros, cabs, and transit chai.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Feature 1: Gemini AI Payment Verification */}
+            <div className="p-6 rounded-2xl bg-white border border-warm-200 shadow-card space-y-3 hover:border-brand-400 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-sm text-charcoal-900">Google Gemini AI Verification</h3>
+              <p className="text-xs text-charcoal-600 leading-relaxed">
+                Gemini Vision AI inspects uploaded payment screenshots to extract UTR numbers, amounts, and recipient details so no one can fake a payment.
+              </p>
+            </div>
+
+            {/* Feature 2: Zero Circular Debts */}
+            <div className="p-6 rounded-2xl bg-white border border-warm-200 shadow-card space-y-3 hover:border-brand-400 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                <Zap className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-sm text-charcoal-900">Zero Circular Debts</h3>
+              <p className="text-xs text-charcoal-600 leading-relaxed">
+                Our greedy net balance resolution engine cancels out circular transfers. In a group of 5, 10 chaotic rides collapse into just 2 simple payments.
+              </p>
+            </div>
+
+            {/* Feature 3: Strict Creator Ownership */}
+            <div className="p-6 rounded-2xl bg-white border border-warm-200 shadow-card space-y-3 hover:border-brand-400 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-sm text-charcoal-900">Strict Payer Immuntability</h3>
+              <p className="text-xs text-charcoal-600 leading-relaxed">
+                You can only log rides you personally paid for. No one can forge bills in your name, enforced by schema-level PostgreSQL check constraints.
+              </p>
+            </div>
+
+            {/* Feature 4: 1-Tap CSV Budget Export */}
+            <div className="p-6 rounded-2xl bg-white border border-warm-200 shadow-card space-y-3 hover:border-brand-400 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
+                <FileSpreadsheet className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-sm text-charcoal-900">One-Tap CSV Export</h3>
+              <p className="text-xs text-charcoal-600 leading-relaxed">
+                Export all filtered transit rides and repayments into standard CSV files for monthly hostel budget records or personal tracking in Excel.
+              </p>
+            </div>
+
+            {/* Feature 5: Native Desktop Convenience */}
+            <div className="p-6 rounded-2xl bg-white border border-warm-200 shadow-card space-y-3 hover:border-brand-400 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                <Keyboard className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-sm text-charcoal-900">Ctrl+V Paste & Shortcuts</h3>
+              <p className="text-xs text-charcoal-600 leading-relaxed">
+                Desktop users can press Ctrl+V to paste payment screenshots directly from Snipping Tool or WhatsApp, plus Ctrl+N for new rides and F1 for cheat sheet.
+              </p>
+            </div>
+
+            {/* Feature 6: Dynamic Commute Periods */}
+            <div className="p-6 rounded-2xl bg-white border border-warm-200 shadow-card space-y-3 hover:border-brand-400 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
+                <Receipt className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-sm text-charcoal-900">Dynamic Commute Periods</h3>
+              <p className="text-xs text-charcoal-600 leading-relaxed">
+                Default view displays Today&apos;s journey spend, with 1-tap switches to This Week, This Month, or All Time to keep student spending under control.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Interactive Commute Scenarios Section */}
-      <section id="scenarios" className="py-16 sm:py-24 bg-white border-y border-warm-200">
+      <section id="scenarios" className="py-16 sm:py-24 bg-white border-b border-warm-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-2xl mx-auto mb-10 space-y-3">
             <span className="text-xs uppercase font-extrabold tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full border border-brand-200">
@@ -400,7 +899,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               See how Expenso solves real campus rides
             </h2>
             <p className="text-xs sm:text-sm text-charcoal-500">
-              Pick a typical college commute routine below and see how multiple messy micro-transactions collapse into clean, simplified settlements.
+              Pick a typical college commute routine below and see how multiple micro-transactions collapse into clean, simplified settlements.
             </p>
           </div>
 
@@ -530,7 +1029,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section className="py-16 sm:py-20 max-w-5xl mx-auto px-4 sm:px-6">
         <div className="text-center max-w-2xl mx-auto mb-12 space-y-3">
           <h2 className="text-2xl sm:text-3xl font-black text-charcoal-900 tracking-tight">
-            Covers every leg of your daily journey
+            Covers every leg of your daily commute
           </h2>
           <p className="text-xs sm:text-sm text-charcoal-500">
             From quick cash e-rickshaws to late night surge cabs, tag and categorize your rides in seconds.
@@ -570,82 +1069,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* How It Works (3 Steps) */}
-      <section id="how-it-works" className="py-16 sm:py-24 bg-white border-y border-warm-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
-            <span className="text-xs uppercase font-extrabold tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full border border-brand-200">
-              Simple 3-Step Flow
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-charcoal-900 tracking-tight">
-              From crowded metros to settled balances in seconds
-            </h2>
-            <p className="text-xs sm:text-sm text-charcoal-500">
-              No complicated spreadsheets, no mental calculations, and no awkward &ldquo;did you receive it?&rdquo; messages.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            {/* Step 1 */}
-            <div className="p-6 rounded-2xl bg-warm-50 border border-warm-200 relative flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="w-10 h-10 rounded-xl bg-brand-700 text-white flex items-center justify-center font-black text-sm shadow-subtle">
-                  1
-                </div>
-                <h3 className="text-base font-bold text-charcoal-900">
-                  Create profile & set up UPI
-                </h3>
-                <p className="text-xs text-charcoal-600 leading-relaxed">
-                  Sign up with your college email and upload your UPI QR code. Expenso extracts your verified UPI ID and name client-side so friends can pay you directly with zero mistakes.
-                </p>
-              </div>
-              <div className="mt-6 pt-4 border-t border-warm-200 flex items-center gap-2 text-[11px] font-semibold text-emerald-700">
-                <ShieldCheck className="w-4 h-4" />
-                <span>Format verified client-side</span>
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="p-6 rounded-2xl bg-warm-50 border border-warm-200 relative flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-subtle">
-                  2
-                </div>
-                <h3 className="text-base font-bold text-charcoal-900">
-                  Form a Blend with friend code
-                </h3>
-                <p className="text-xs text-charcoal-600 leading-relaxed">
-                  Every user gets a unique 6-character personal invite code (e.g. <code className="font-mono bg-warm-200 px-1 py-0.5 rounded">DIVY24</code>). Enter your friend&apos;s code to connect instantly without public links.
-                </p>
-              </div>
-              <div className="mt-6 pt-4 border-t border-warm-200 flex items-center gap-2 text-[11px] font-semibold text-charcoal-600">
-                <Smartphone className="w-4 h-4 text-brand-700" />
-                <span>6-character personal codes</span>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="p-6 rounded-2xl bg-warm-50 border border-warm-200 relative flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center font-black text-sm shadow-subtle">
-                  3
-                </div>
-                <h3 className="text-base font-bold text-charcoal-900">
-                  Ride, split & settle with proof
-                </h3>
-                <p className="text-xs text-charcoal-600 leading-relaxed">
-                  Log rides in under 10 seconds. Settle debts via UPI apps and submit a payment screenshot. Outstanding debt clears only when the recipient confirms!
-                </p>
-              </div>
-              <div className="mt-6 pt-4 border-t border-warm-200 flex items-center gap-2 text-[11px] font-semibold text-brand-800">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Authoritative recipient verification</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Comparison Matrix: Expenso vs Splitwise vs WhatsApp/Excel */}
       <section id="comparison" className="py-16 sm:py-24 max-w-5xl mx-auto px-4 sm:px-6">
         <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
@@ -662,7 +1085,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         <div className="bg-white rounded-3xl border border-warm-200 shadow-card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left border-collapse text-xs">
+            <table className="w-full min-w-[620px] text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-warm-100/70 border-b border-warm-200 text-charcoal-800">
                   <th className="py-3.5 px-4 font-bold">Feature</th>
@@ -674,6 +1097,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-warm-100">
+                <tr>
+                  <td className="py-3 px-4 font-bold text-charcoal-900">Platform Availability</td>
+                  <td className="py-3 px-4 font-bold text-brand-900 bg-brand-50/30 border-x border-brand-200/40">
+                    <Check className="w-4 h-4 inline mr-1 text-emerald-600" /> Web + Android APK + Windows EXE
+                  </td>
+                  <td className="py-3 px-4 text-charcoal-600">Mobile & Web only</td>
+                  <td className="py-3 px-4 text-charcoal-600">Manual text messages</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-bold text-charcoal-900">AI Receipt Verification</td>
+                  <td className="py-3 px-4 font-bold text-emerald-700 bg-brand-50/30 border-x border-brand-200/40">
+                    <Sparkles className="w-4 h-4 inline mr-1 text-brand-700" /> Gemini AI Vision (checks UTR & ₹)
+                  </td>
+                  <td className="py-3 px-4 text-rose-600">
+                    <X className="w-4 h-4 inline mr-1" /> None
+                  </td>
+                  <td className="py-3 px-4 text-charcoal-600">Manual squinting at chat</td>
+                </tr>
                 <tr>
                   <td className="py-3 px-4 font-bold text-charcoal-900">Logging Speed</td>
                   <td className="py-3 px-4 font-bold text-brand-900 bg-brand-50/30 border-x border-brand-200/40">
@@ -693,6 +1134,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </td>
                 </tr>
                 <tr>
+                  <td className="py-3 px-4 font-bold text-charcoal-900">CSV Budget Export</td>
+                  <td className="py-3 px-4 font-bold text-emerald-700 bg-brand-50/30 border-x border-brand-200/40">
+                    <FileSpreadsheet className="w-4 h-4 inline mr-1 text-emerald-600" /> 1-Click CSV Export (Free)
+                  </td>
+                  <td className="py-3 px-4 text-rose-600 font-semibold">
+                    <X className="w-4 h-4 inline mr-1" /> Splitwise Pro Paywall
+                  </td>
+                  <td className="py-3 px-4 text-charcoal-600">Manual copy-paste</td>
+                </tr>
+                <tr>
                   <td className="py-3 px-4 font-bold text-charcoal-900">Direct UPI Handoff</td>
                   <td className="py-3 px-4 font-bold text-emerald-700 bg-brand-50/30 border-x border-brand-200/40">
                     <Check className="w-4 h-4 inline mr-1 text-emerald-600" /> GPay / PhonePe / Paytm deep-link
@@ -701,16 +1152,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <td className="py-3 px-4 text-rose-600 font-semibold">
                     <X className="w-4 h-4 inline mr-1" /> Copy-pasting numbers
                   </td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 font-bold text-charcoal-900">Screenshot Proof & Confirmation</td>
-                  <td className="py-3 px-4 font-bold text-emerald-700 bg-brand-50/30 border-x border-brand-200/40">
-                    <Check className="w-4 h-4 inline mr-1 text-emerald-600" /> Recipient approves before clear
-                  </td>
-                  <td className="py-3 px-4 text-rose-600">
-                    <X className="w-4 h-4 inline mr-1" /> Debt clears without verification
-                  </td>
-                  <td className="py-3 px-4 text-charcoal-600">Chat screenshots get buried</td>
                 </tr>
                 <tr>
                   <td className="py-3 px-4 font-bold text-charcoal-900">Privacy & Ads</td>
@@ -806,7 +1247,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <ChevronDown className="w-4 h-4 transition-transform duration-300" />
                   </div>
                 </button>
-                {/* Smooth Animated Collapsible Accordion Content */}
                 <div
                   className={`grid transition-all duration-300 ease-out ${
                     isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
@@ -831,27 +1271,37 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             Ready to end daily commute money confusion?
           </h2>
           <p className="text-xs sm:text-sm text-brand-100 max-w-lg mx-auto leading-relaxed">
-            Set up your profile, invite your commute friends with your 6-character code, and start recording rides in under 10 seconds.
+            Get the native app for Android or Windows, or launch the instant Web App in your browser. Free forever and ad-free.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            {isLoggedIn ? (
-              <button
-                onClick={() => setShowLandingPage(false)}
-                className="btn-action-secondary group w-full sm:w-auto px-6 py-3.5 bg-white text-brand-900 hover:bg-warm-100 font-bold text-xs sm:text-sm rounded-xl shadow-elevated flex items-center justify-center gap-2"
-              >
-                <span>Return to Dashboard</span>
-                <ArrowRight className="w-4 h-4 text-brand-800 group-hover:translate-x-1.5 transition-transform duration-200" />
-              </button>
-            ) : (
-              <button
-                onClick={onGetStarted}
-                className="btn-action-secondary group w-full sm:w-auto px-6 py-3.5 bg-white text-brand-900 hover:bg-warm-100 font-bold text-xs sm:text-sm rounded-xl shadow-elevated flex items-center justify-center gap-2"
-              >
-                <span>Get started free</span>
-                <ArrowRight className="w-4 h-4 text-brand-800 group-hover:translate-x-1.5 transition-transform duration-200" />
-              </button>
-            )}
+            <a
+              href="/downloads/expenso.apk"
+              download="expenso.apk"
+              className="btn-action-secondary group w-full sm:w-auto px-6 py-3.5 bg-white text-brand-900 hover:bg-warm-100 font-bold text-xs sm:text-sm rounded-xl shadow-elevated flex items-center justify-center gap-2"
+            >
+              <Smartphone className="w-4 h-4 text-emerald-700" />
+              <span>Download Android APK</span>
+            </a>
+            <a
+              href="/downloads/Expenso-Setup.exe"
+              download="Expenso-Setup.exe"
+              className="btn-action-secondary group w-full sm:w-auto px-6 py-3.5 bg-white text-brand-900 hover:bg-warm-100 font-bold text-xs sm:text-sm rounded-xl shadow-elevated flex items-center justify-center gap-2"
+            >
+              <Monitor className="w-4 h-4 text-sky-700" />
+              <span>Download Windows EXE</span>
+            </a>
+            <button
+              onClick={() => {
+                if (isLoggedIn) setShowLandingPage(false);
+                else onGetStarted();
+              }}
+              className="btn-action-primary group w-full sm:w-auto px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-elevated flex items-center justify-center gap-2"
+            >
+              <Globe className="w-4 h-4 text-white" />
+              <span>Open Web App</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
           </div>
         </div>
       </section>
@@ -875,35 +1325,37 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <BrandWordmark size="md" />
               </div>
               <p className="text-xs text-charcoal-500 mt-1 max-w-sm">
-                Shared college commute expense manager. Built with love for daily college travel across India.
+                Shared college commute expense manager with Gemini AI verification. Built with love for daily college travel across India.
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              {isLoggedIn ? (
-                <button
-                  onClick={() => setShowLandingPage(false)}
-                  className="px-5 py-2.5 bg-brand-700 hover:bg-brand-800 text-white text-xs font-bold rounded-xl shadow-card transition-all flex items-center gap-1.5"
-                >
-                  <span>Go to Dashboard</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={onLogin}
-                    className="px-4 py-2 text-xs font-bold text-charcoal-700 hover:text-charcoal-900 hover:bg-warm-100 rounded-xl transition-colors"
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={onGetStarted}
-                    className="px-5 py-2.5 bg-brand-700 hover:bg-brand-800 text-white text-xs font-bold rounded-xl shadow-card transition-all"
-                  >
-                    Get Started
-                  </button>
-                </>
-              )}
+            <div className="flex flex-wrap items-center gap-3">
+              <a
+                href="/downloads/expenso.apk"
+                download
+                className="px-3.5 py-2 bg-white hover:bg-warm-100 border border-warm-300 rounded-xl text-xs font-bold text-charcoal-700 flex items-center gap-1.5 shadow-xs transition-colors"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Android APK</span>
+              </a>
+              <a
+                href="/downloads/Expenso-Setup.exe"
+                download
+                className="px-3.5 py-2 bg-white hover:bg-warm-100 border border-warm-300 rounded-xl text-xs font-bold text-charcoal-700 flex items-center gap-1.5 shadow-xs transition-colors"
+              >
+                <Monitor className="w-3.5 h-3.5 text-sky-600" />
+                <span>Windows EXE</span>
+              </a>
+              <button
+                onClick={() => {
+                  if (isLoggedIn) setShowLandingPage(false);
+                  else onGetStarted();
+                }}
+                className="px-4 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-xl text-xs font-bold shadow-card flex items-center gap-1.5 transition-colors"
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>Web App</span>
+              </button>
             </div>
           </div>
 

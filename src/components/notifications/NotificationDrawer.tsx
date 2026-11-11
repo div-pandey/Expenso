@@ -1,7 +1,8 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import { X, Bell, CheckCircle2, XCircle, Receipt, Users } from 'lucide-react';
+import { X, Bell, CheckCircle2, XCircle, Receipt, Users, Smartphone } from 'lucide-react';
 import type { InAppNotification, Settlement } from '../../types';
+import { deviceNotificationService } from '../../services/deviceNotificationService';
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -49,6 +50,12 @@ function NotificationIcon({ type }: NotificationIconProps) {
       return (
         <span className="flex items-center justify-center w-9 h-9 rounded-full bg-forest-100 text-forest-700 shrink-0">
           <Users size={18} />
+        </span>
+      );
+    case 'expense_added':
+      return (
+        <span className="flex items-center justify-center w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+          <Receipt size={18} />
         </span>
       );
     default:
@@ -143,6 +150,14 @@ function NotificationCard({
         <p className="mt-0.5 text-xs text-stone-500 leading-relaxed line-clamp-2">
           {message}
         </p>
+
+        {type === 'expense_added' && !!notification.amountPaise && (
+          <div className="mt-2 flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 border border-emerald-200 text-emerald-800">
+              Your Share: ₹{(notification.amountPaise / 100).toFixed(0)}
+            </span>
+          </div>
+        )}
 
         {/* Action buttons */}
         {(showViewProof || showViewButton) && (
@@ -272,6 +287,37 @@ export default function NotificationDrawer() {
               <X size={18} />
             </button>
           </div>
+        </div>
+
+        {/* ── Device Notification Sync Bar ── */}
+        <div className="px-4 py-2 bg-warm-100/90 border-b border-warm-200 flex items-center justify-between text-xs text-charcoal-700 shrink-0">
+          <div className="flex items-center gap-1.5 font-medium">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[11px] text-charcoal-600 flex items-center gap-1">
+              <Smartphone className="w-3 h-3 text-brand-700" />
+              Device Push Active
+            </span>
+          </div>
+          <button
+            onClick={async () => {
+              await deviceNotificationService.requestPermission();
+              await deviceNotificationService.sendDeviceNotification({
+                id: 'test_alert_' + Date.now(),
+                userId: 'current',
+                type: 'expense_added',
+                title: 'Metro Ride Split (Live Alert)',
+                message: 'Divyansh added "3 E-Rickshaws to Metro Gate" in Campus Blend. Your share is ₹30.',
+                amountPaise: 3000,
+                actorId: 'test',
+                isRead: false,
+                isHandled: false,
+                createdAt: new Date().toISOString(),
+              });
+            }}
+            className="text-[11px] font-bold text-brand-700 hover:text-brand-900 bg-white px-2 py-0.5 rounded-lg border border-warm-300 shadow-subtle hover:bg-warm-50 transition-colors"
+          >
+            Test Device Alert
+          </button>
         </div>
 
         {/* ── Notification list ── */}

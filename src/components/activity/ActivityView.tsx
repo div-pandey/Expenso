@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Receipt,
   Users,
+  Download,
 } from 'lucide-react';
 
 type ActivityEntry =
@@ -125,6 +126,59 @@ export const ActivityView: React.FC = () => {
     setSelectedMember('all');
   };
 
+  const exportToCsv = () => {
+    if (filteredEntries.length === 0) return;
+    const rows = [
+      ['Date', 'Type', 'Description', 'Category', 'Paid By / From', 'Participants / To', 'Amount (INR)', 'Notes'],
+    ];
+
+    for (const item of filteredEntries) {
+      if (item.type === 'expense') {
+        const exp = item.data;
+        const payer = members.find((m) => m.id === exp.payerId)?.name || 'Unknown';
+        const parts = exp.participantIds
+          .map((pid) => members.find((m) => m.id === pid)?.name || pid)
+          .join('; ');
+        rows.push([
+          new Date(exp.date).toLocaleDateString(),
+          'Ride Expense',
+          `"${exp.description.replace(/"/g, '""')}"`,
+          exp.category,
+          `"${payer}"`,
+          `"${parts}"`,
+          (exp.amountPaise / 100).toFixed(2),
+          `"${(exp.notes || '').replace(/"/g, '""')}"`,
+        ]);
+      } else {
+        const set = item.data;
+        const fromM = members.find((m) => m.id === set.fromMemberId)?.name || 'Unknown';
+        const toM = members.find((m) => m.id === set.toMemberId)?.name || 'Unknown';
+        rows.push([
+          new Date(set.date).toLocaleDateString(),
+          'UPI Repayment',
+          `Repayment from ${fromM} to ${toM}`,
+          'settlement',
+          `"${fromM}"`,
+          `"${toM}"`,
+          (set.amountPaise / 100).toFixed(2),
+          `"${(set.notes || '').replace(/"/g, '""')}"`,
+        ]);
+      }
+    }
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + rows.map((e) => e.join(',')).join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute(
+      'download',
+      `Expenso_${currentBlend?.name ? currentBlend.name.replace(/\s+/g, '_') : 'Commute'}_Report.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in pb-16">
       {/* Header */}
@@ -139,10 +193,21 @@ export const ActivityView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto">
+          {filteredEntries.length > 0 && (
+            <button
+              onClick={exportToCsv}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white hover:bg-warm-100 text-charcoal-700 font-bold text-xs sm:text-sm rounded-xl border border-warm-300 shadow-subtle transition-all cursor-pointer"
+              title="Export filtered activity to CSV"
+            >
+              <Download className="w-4 h-4 text-charcoal-500" />
+              <span>Export CSV</span>
+            </button>
+          )}
+
           {hasBlendFriends ? (
             <button
               onClick={openAddExpense}
-              className="flex items-center gap-2 px-4 py-2.5 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-card transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-card transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Add Expense</span>

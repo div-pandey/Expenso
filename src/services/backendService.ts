@@ -841,6 +841,7 @@ export const backendService = {
               role: bm.role || 'member',
               joinedAt: bm.joined_at || new Date().toISOString(),
             });
+            const localUser = sandboxBackend.getUserById(bm.user_id);
             const pm = pmMap.get(bm.user_id);
             const paymentMethod: UserPaymentMethod | undefined = pm ? {
               userId: pm.user_id,
@@ -851,7 +852,7 @@ export const backendService = {
               currency: pm.currency || 'INR',
               createdAt: pm.created_at,
               updatedAt: pm.updated_at,
-            } : undefined;
+            } : localUser?.paymentMethod;
 
             if (bm.profile) {
               sandboxBackend.addUser({
@@ -862,7 +863,7 @@ export const backendService = {
                 avatarColor: bm.profile.avatar_color,
                 inviteCode: bm.profile.invite_code,
                 phone: bm.profile.phone,
-                paymentMethod,
+                paymentMethod: paymentMethod || localUser?.paymentMethod,
                 createdAt: bm.profile.created_at,
               });
             }
@@ -870,6 +871,7 @@ export const backendService = {
           sandboxBackend.addBlendMembers(blendId, memberList);
 
           return data.map(bm => {
+            const localUser = sandboxBackend.getUserById(bm.user_id);
             const pm = pmMap.get(bm.user_id);
             const paymentMethod: UserPaymentMethod | undefined = pm ? {
               userId: pm.user_id,
@@ -880,7 +882,7 @@ export const backendService = {
               currency: pm.currency || 'INR',
               createdAt: pm.created_at,
               updatedAt: pm.updated_at,
-            } : undefined;
+            } : localUser?.paymentMethod;
 
             return {
               id: bm.id,
@@ -1690,6 +1692,46 @@ export const backendService = {
   ): Promise<Expense> {
     const expense = sandboxBackend.createExpense(blendId, data);
     await this.syncExpenseToCloud(expense);
+
+    // Sync newly created notifications for blend participants
+    const currentUser = sandboxBackend.getCurrentUser();
+    for (const pid of data.participantIds) {
+      if (pid !== currentUser.id) {
+        const participantNotifs = sandboxBackend.getNotifications(pid);
+        const relatedNotif = participantNotifs.find(n => n.expenseId === expense.id);
+        if (relatedNotif) {
+          if (isSupabaseConfigured && supabase) {
+            try {
+              await supabase.from('in_app_notifications').upsert({
+                id: relatedNotif.id,
+                user_id: relatedNotif.userId,
+                blend_id: relatedNotif.blendId,
+                type: relatedNotif.type,
+                title: relatedNotif.title,
+                message: relatedNotif.message,
+                actor_id: relatedNotif.actorId,
+                amount_paise: relatedNotif.amountPaise,
+                is_read: false,
+                is_handled: false,
+                created_at: relatedNotif.createdAt,
+              });
+            } catch (err) {
+              console.warn('Could not sync expense notification to Supabase:', err);
+            }
+          }
+          if (internalChannel) {
+            try {
+              internalChannel.postMessage({ type: 'NOTIFICATION_SYNC', payload: { notification: relatedNotif } });
+            } catch {}
+          }
+          if (realtimeChannel) {
+            try {
+              realtimeChannel.send({ type: 'broadcast', event: 'NOTIFICATION_SYNC', payload: { notification: relatedNotif } });
+            } catch {}
+          }
+        }
+      }
+    }
 
     if (internalChannel) {
       try {

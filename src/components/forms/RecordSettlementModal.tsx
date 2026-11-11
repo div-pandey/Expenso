@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatCurrency, parseRupeesToPaise } from '../../utils/currency';
 import { buildSafeUpiUri, isValidUpiId } from '../../utils/upi';
+import { launchUpiApp, resolveRecipientUpi, UPI_APP_PACKAGES } from '../../services/upiPaymentService';
 import {
   verifyPaymentProofWithGemini,
   getGeminiApiKey,
@@ -118,12 +119,8 @@ export const RecordSettlementModal: React.FC = () => {
   const toMember = members.find(m => m.id === toMemberId);
   const currentDebt = userDebts.find(d => d.toMemberId === toMemberId);
 
-  // AUTOMATED UPI ID: We use the UPI ID collected earlier via QR during onboarding!
-  // Fallbacks guarantee zero manual entry is ever required.
-  const registeredUpi = toMember?.paymentMethod?.upiId?.trim() || '';
-  const cachedUpi = (typeof localStorage !== 'undefined' ? localStorage.getItem(`expenso_recipient_upi_${toMemberId}`) : null) || '';
-  const fallbackUpi = toMember?.phone ? `${toMember.phone}@paytm` : `${toMember?.inviteCode?.toLowerCase() || 'user'}@upi`;
-  const lenderUpiId = registeredUpi || cachedUpi || fallbackUpi;
+  // AUTOMATED UPI ID: Always pre-filled from signup details or cached recipient data
+  const lenderUpiId = resolveRecipientUpi(toMemberId, toMember?.name);
 
   // Build the standardized UPI deep link with pre-filled lender UPI ID and lended amount
   const upiDeepLink = parsedAmountPaise > 0 && isValidUpiId(lenderUpiId)
@@ -143,13 +140,16 @@ export const RecordSettlementModal: React.FC = () => {
     setTimeout(() => setCopiedUpi(false), 2000);
   };
 
-  const handleOpenUpiApp = () => {
+  const handleOpenUpiApp = async (packageName?: string) => {
     if (!upiDeepLink) {
       showToast('Please enter a valid repayment amount first', 'error');
       return;
     }
-    // Directly trigger redirect into installed UPI app
-    window.location.href = upiDeepLink;
+    showToast('Redirecting to UPI payment…');
+    const launched = await launchUpiApp(upiDeepLink, packageName);
+    if (!launched) {
+      showToast('Could not open UPI app automatically. Please copy the UPI ID below.', 'info');
+    }
   };
 
   const verifyProof = async (dataUrl: string) => {
@@ -533,26 +533,48 @@ export const RecordSettlementModal: React.FC = () => {
             </div>
 
             {/* DIRECT JUMP TO INSTALLED UPI APP BUTTON */}
-            <a
-              href={upiDeepLink || '#'}
-              target="_self"
-              onClick={handleOpenUpiApp}
-              className="btn-action-primary group relative overflow-hidden flex items-center justify-center gap-2.5 w-full py-3.5 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white text-sm sm:text-base font-black rounded-xl shadow-elevated transition-all duration-200"
+            <button
+              type="button"
+              onClick={() => handleOpenUpiApp()}
+              className="btn-action-primary group relative overflow-hidden flex items-center justify-center gap-2.5 w-full py-4 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white text-sm sm:text-base font-black rounded-xl shadow-elevated transition-all duration-200 cursor-pointer"
             >
               <Smartphone className="w-5 h-5 group-hover:scale-110 transition-transform duration-200 shrink-0" />
               <span>
                 Pay {parsedAmountPaise > 0 ? formatCurrency(parsedAmountPaise) : ''} via UPI App
               </span>
               <ExternalLink className="w-4 h-4 opacity-80 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0" />
-            </a>
+            </button>
 
-            {/* Redirects chip */}
-            <div className="flex items-center justify-center gap-1.5 text-[9px] font-bold text-charcoal-500">
-              <span>Direct jump to:</span>
-              <span className="px-1.5 py-0.5 bg-white rounded border border-warm-200 text-charcoal-700">Google Pay</span>
-              <span className="px-1.5 py-0.5 bg-white rounded border border-warm-200 text-charcoal-700">PhonePe</span>
-              <span className="px-1.5 py-0.5 bg-white rounded border border-warm-200 text-charcoal-700">Paytm</span>
-              <span className="px-1.5 py-0.5 bg-white rounded border border-warm-200 text-charcoal-700">BHIM</span>
+            {/* Quick 1-Tap App Shortcuts */}
+            <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+              <button
+                type="button"
+                onClick={() => handleOpenUpiApp(UPI_APP_PACKAGES.gpay)}
+                className="py-1.5 px-1 bg-white hover:bg-emerald-50 rounded-lg text-center border border-emerald-200 text-[11px] font-bold text-charcoal-800 shadow-subtle transition-colors cursor-pointer"
+              >
+                GPay
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenUpiApp(UPI_APP_PACKAGES.phonepe)}
+                className="py-1.5 px-1 bg-white hover:bg-emerald-50 rounded-lg text-center border border-emerald-200 text-[11px] font-bold text-charcoal-800 shadow-subtle transition-colors cursor-pointer"
+              >
+                PhonePe
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenUpiApp(UPI_APP_PACKAGES.paytm)}
+                className="py-1.5 px-1 bg-white hover:bg-emerald-50 rounded-lg text-center border border-emerald-200 text-[11px] font-bold text-charcoal-800 shadow-subtle transition-colors cursor-pointer"
+              >
+                Paytm
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenUpiApp(UPI_APP_PACKAGES.bhim)}
+                className="py-1.5 px-1 bg-white hover:bg-emerald-50 rounded-lg text-center border border-emerald-200 text-[11px] font-bold text-charcoal-800 shadow-subtle transition-colors cursor-pointer"
+              >
+                BHIM
+              </button>
             </div>
 
             {/* Scan to Pay toggle for desktop */}

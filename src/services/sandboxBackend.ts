@@ -8,6 +8,7 @@ import type {
   TransportCategory,
   UserPaymentMethod,
   InAppNotification,
+  NotificationType,
 } from '../types';
 import { generateInviteCode, normalizeInviteCode } from '../utils/inviteCodes';
 import { generateUUID } from '../utils/uuid';
@@ -478,7 +479,11 @@ class SandboxBackendService {
     this.syncFromStorage();
     const idx = this.db.users.findIndex(u => u.id === user.id || u.inviteCode === user.inviteCode);
     if (idx >= 0) {
-      this.db.users[idx] = { ...this.db.users[idx], ...user };
+      this.db.users[idx] = {
+        ...this.db.users[idx],
+        ...user,
+        paymentMethod: user.paymentMethod || this.db.users[idx].paymentMethod,
+      };
     } else {
       this.db.users.push(user);
     }
@@ -522,6 +527,10 @@ class SandboxBackendService {
   public findUserById(userId: string): UserProfile | null {
     this.syncFromStorage();
     return this.db.users.find(u => u.id === userId) || null;
+  }
+
+  public getUserById(userId: string): UserProfile | null {
+    return this.findUserById(userId);
   }
 
   public findUserByInviteCode(code: string): UserProfile | null {
@@ -1058,6 +1067,33 @@ class SandboxBackendService {
     };
 
     this.db.expenses.unshift(newExpense);
+
+    // Create real-time in-app notification for each participant who was added to the bill (excluding payer)
+    const blend = this.db.blends.find(b => b.id === blendId);
+    const blendName = blend ? blend.name : 'Blend';
+
+    for (const pid of data.participantIds) {
+      if (pid !== currentUser.id) {
+        const participantSharePaise = shares[pid] || 0;
+        const shareRupees = (participantSharePaise / 100).toFixed(0);
+        const notif: InAppNotification = {
+          id: generateUUID(),
+          userId: pid,
+          blendId,
+          type: 'expense_added' as NotificationType,
+          title: `${currentUser.fullName} added you to an expense`,
+          message: `${currentUser.fullName} added "${newExpense.description}" in ${blendName}. Your split share is ₹${shareRupees}.`,
+          expenseId: newExpense.id,
+          amountPaise: participantSharePaise,
+          actorId: currentUser.id,
+          isRead: false,
+          isHandled: false,
+          createdAt: new Date().toISOString(),
+        };
+        this.addNotification(notif);
+      }
+    }
+
     this.saveDB();
     return newExpense;
   }

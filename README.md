@@ -2,23 +2,36 @@
 
 > *For when "bhai tu dede, baad mein hisaab karte hain" gets out of hand.*
 
-A fast, mobile-first shared commute expense manager built for college friends and daily commuters. Expenso tracks shared autos, metros, cabs, and transit chai in 10 seconds, eliminates messy circular debts, and coordinates verified UPI repayments with screenshot evidence.
+A fast, cross-platform shared commute expense manager built for college friends and daily commuters. Expenso tracks shared autos, metros, cabs, and transit chai in 10 seconds, eliminates messy circular debts with integer paise math, coordinates verified UPI repayments backed by Google Gemini AI vision, and exports reports to CSV in one click.
+
+Available across **Web**, **Android (.apk)**, and **Windows Desktop (.exe)**.
 
 ---
 
-## Key Highlights
+## 🚀 Key Highlights & Cross-Platform Suite
 
-- **10-Second Commute Logging**: Rapid entry for autos, e-rickshaws, metro tokens, cab rides, and transit snacks.
-- **Strict Payer Ownership**: Authenticated users can only record rides they paid for. No impersonation, enforced at database and UI levels.
+- **Cross-Platform Availability**:
+  - **Instant Web App**: Runs directly in modern browsers (Chrome, Edge, Safari, Firefox) with 100% offline sandbox support or live Supabase cloud sync.
+  - **Android Native App (`expenso.apk`, 5.3 MB)**: Standalone native APK packaged with Capacitor, native touch responsiveness, offline asset caching, and direct UPI intent switching (Google Pay, PhonePe, Paytm, BHIM).
+  - **Windows Desktop App (`Expenso-Setup.exe`, 1.9 MB & `Expenso.exe`, 1.1 MB)**: High-DPI Windows application built with C# and embedded Microsoft WebView2, featuring system tray integration, zero browser chrome, and isolated storage.
+- **Google Gemini AI Payment Proof Verification**:
+  - Automatically inspects uploaded UPI payment confirmation screenshots using Gemini Vision AI.
+  - Detects and cross-checks the bank UTR / transaction ID, payee name, and transferred amount in paise before recipient approval.
+- **10-Second Commute Logging**: Rapid entry for autos, e-rickshaws, metro tokens, cab rides, and transit snacks with immutable authenticated payer locking.
+- **One-Tap CSV Export**: Export all filtered transit rides, repayments, split shares, and notes into clean spreadsheets for hostel accounting and student budgeting.
+- **Desktop Power Features**:
+  - **Clipboard Paste (`Ctrl+V`)**: Paste payment confirmation screenshots directly into the settlement modal from the Windows Snipping Tool or WhatsApp.
+  - **Keyboard Shortcuts**: `Ctrl+N` (New Ride), `Ctrl+S` (Settle Up), `Ctrl+B` (Blend Switcher), `Ctrl+1..4` (Tab Navigation), `F1` / `Ctrl+/` (Shortcuts Cheat Sheet).
+  - **System Tray Icon**: Quick actions right from the Windows taskbar.
 - **Zero Circular Debts**: A greedy balance resolution engine collapses multiple overlapping rides into the minimum possible transfers.
 - **Smart Repayment Guardrails**:
   - Only members who actually owe money see repayment options.
   - In a group of X, Y, Z, if X owes Z and Z alone, only Z is shown as a recipient. Y is completely hidden.
   - Pure lenders and settled users see a reassuring *"You don't owe anything!"* status.
-- **Verified UPI Settlements**: Direct deep links to native mobile UPI apps (Google Pay, PhonePe, Paytm, BHIM) with strict payee locking, QR code scanning, and screenshot proof verification.
 - **Dynamic Commute Spend Periods**: Default view displays **Today's** spend, with one-tap switches to *This Week*, *This Month*, or *All Time*.
 - **Private Friend Blends**: Create custom commute groups using unique 6-character personal invite codes (e.g. `DIVY24`, `RAHUL9`).
-- **Clean Vector UI**: Fully responsive, mobile-first design built with Tailwind CSS and Lucide vector icons with zero distracting emojis.
+- **Real-Time Notification System**: Push alerts and in-app notifications whenever friends add you to a ride expense with your split share or submit a settlement proof.
+- **60-Day Auth Session Memory**: Secure persistent login token that automatically refreshes every 24 hours without storing plaintext passwords.
 
 ---
 
@@ -43,11 +56,12 @@ A fast, mobile-first shared commute expense manager built for college friends an
   ```
 - Only the creator of an expense can edit or delete it.
 
-### D. Verified Settlement Lifecycle & UPI Security
-Settlements in Expenso follow a safe, verifiable 3-step lifecycle:
+### D. Verified Settlement Lifecycle & Gemini AI Review
+Settlements in Expenso follow a safe, verifiable 4-step lifecycle:
 1. **Initiate & Deep Link**: Generates a standard `upi://pay` URI locked strictly to the recipient's verified UPI ID and name. Tapping **"Pay via UPI App"** opens the device's native app chooser on mobile (GPay, PhonePe, Paytm, BHIM).
-2. **Screenshot Proof**: The debtor uploads a payment confirmation screenshot. The settlement status transitions to `proof_submitted` (debt is **not** cleared yet, preventing false settlement claims).
-3. **Recipient Confirmation**: The creditor receives an in-app notification, reviews the screenshot proof, and taps **Received**. Only upon confirmation does the balance recalculate and clear.
+2. **Screenshot Proof**: The debtor uploads a payment confirmation screenshot via file browser, drag-and-drop, or `Ctrl+V` clipboard paste. The settlement status transitions to `proof_submitted` (debt is **not** cleared yet, preventing false settlement claims).
+3. **Gemini AI Vision Analysis**: Google Gemini AI inspects the screenshot to detect payee name, transferred amount, and UPI UTR reference number.
+4. **Recipient Confirmation**: The creditor receives an in-app notification, reviews the AI checklist and screenshot proof, and taps **Received**. Only upon confirmation does the balance recalculate and clear.
 
 ---
 
@@ -73,6 +87,7 @@ The repository includes a complete PostgreSQL migration file at `supabase/schema
 - `expenses`: commute expenses with foreign keys, category check, and `CHECK (payer_id = created_by)`.
 - `expense_splits`: participant shares stored in integer paise.
 - `settlements`: direct repayment records with proof URLs and status (`pending_payment`, `proof_submitted`, `confirmed`, `rejected`).
+- `in_app_notifications`: real-time alert delivery table for member splits and proof submissions.
 - **Row-Level Security (RLS)**:
   - Users only see Blends they belong to.
   - Users only create expenses where `auth.uid() = created_by AND auth.uid() = payer_id`.
@@ -81,129 +96,89 @@ The repository includes a complete PostgreSQL migration file at `supabase/schema
 
 ---
 
-## 4. Automated Test Suite (41 Tests Passing)
+## 4. Automated Test Suite (67 Tests Passing)
 
 Run the full automated test suite anytime:
 ```powershell
 npm test
 ```
 
-### Test Results Summary: 41 passed (100%)
-
-#### 1. Financial Calculations (`calculations.test.ts` — 9 tests)
-- Equal splits without remainder
-- Subset participant splits (e.g. ₹500 split between 2 members in a 3-person Blend)
-- Deterministic paise rounding
-- Dynamic balance recalculation on expense edit/delete
-- Greedy settlement resolution
-
-#### 2. Auto-Recalculation & Lifecycle (`balanceRecalculation.test.ts` — 11 tests)
-- Recalculates net balances after partial repayments
-- Preserves expense history and timestamps independently of settlements
-- Clears suggested settlements once debts reach ₹0
-
-#### 3. UPI Parsing, Deep Linking & Debtor Filtering (`upiAndSettlements.test.ts` — 8 tests)
-- Validates and parses UPI VPA formats and `upi://pay` URIs
-- Generates safe, URL-encoded UPI deep links with strict payee locking
-- Unconfirmed settlements (`pending`, `proof_submitted`) do NOT clear debt until recipient confirms
-- In a 3-person Blend (X, Y, Z), if X owes Z and Z alone, repayment recipient options show **only Z and exclude Y**
-- Lenders who only lent money have zero debts and receive the *"You don't owe anything!"* empty state
-
-#### 4. Security, Ownership & Blend Isolation (`securityAndOwnership.test.ts` — 13 tests)
-- 6-character invite code generation and collision resistance
-- Cloud & local multi-account code lookup and friend connection
-- Rejection of forged expense creation requests
-- Rejection of unauthorized expense/settlement edits or deletions
-- Multi-Blend isolation and unauthorized access prevention
+### Test Coverage Summary: 67 passed (100%)
+- **`calculations.test.ts` (9 tests)**: Equal splits, subset participant splits, deterministic paise rounding, greedy settlement resolution.
+- **`balanceRecalculation.test.ts` (11 tests)**: Dynamic balance recalculation on ride edits/deletes, partial repayments, settlement clearance.
+- **`upiAndSettlements.test.ts` (10 tests)**: UPI URI generation, VPA validation, creditor-only recipient filtering, proof verification lifecycle.
+- **`geminiPaymentVerifier.test.ts` (7 tests)**: AI payment proof checklist, UTR detection, amount verification, error handling.
+- **`authSession.test.ts` (4 tests)**: 60-day auth token memory, 24-hour token rotation, password exclusion in storage.
+- **`notificationScenarios.test.ts` (3 tests)**: Split share notification delivery to participants (excluding payer), selective group notifications.
+- **`securityAndOwnership.test.ts` (23 tests)**: 6-character code generation/lookup, payer ownership enforcement, unauthorized edit/delete rejection, blend isolation.
 
 ---
 
-## 5. Project Structure
+## 5. Download & Run Apps
 
-```
-d:/Expenso/
-├── supabase/
-│   └── schema.sql               # PostgreSQL schema, constraints, RLS & Realtime
-├── .env.example                 # Environment configuration template
-├── package.json                 # Dependencies (React 19, Lucide, Tailwind, Supabase, Vitest)
-├── tailwind.config.js           # Warm stone and forest green design tokens
-├── vite.config.ts               # Vite & Vitest configuration
-├── src/
-│   ├── types/
-│   │   └── index.ts             # UserProfile, Blend, Expense, Settlement types
-│   ├── services/
-│   │   ├── supabase.ts          # Supabase client initializer
-│   │   ├── sandboxBackend.ts    # Simulated multi-account sandbox (offline / test mode)
-│   │   ├── backendService.ts    # Unified backend repository interface
-│   │   └── __tests__/
-│   │       └── securityAndOwnership.test.ts # Security and ownership tests
-│   ├── utils/
-│   │   ├── inviteCodes.ts       # 6-character code generator & validator
-│   │   ├── calculations.ts      # Pure math engine (paise shares, balances, greedy settlements)
-│   │   ├── currency.ts          # INR currency formatting and paise conversion
-│   │   ├── dates.ts             # Indian local time and period filters (Today, Week, Month)
-│   │   ├── transport.ts         # Transport mode configurations
-│   │   ├── upi.ts               # UPI URI generator, QR decoder, and VPA validator
-│   │   └── __tests__/
-│   │       ├── calculations.test.ts         # Financial engine unit tests
-│   │       ├── balanceRecalculation.test.ts # Auto-recalculation & settlement tests
-│   │       └── upiAndSettlements.test.ts    # UPI deep links and debtor filtering tests
-│   ├── context/
-│   │   └── AppContext.tsx       # Global state management, active Blend, and accounts
-│   └── components/
-│       ├── layout/
-│       │   └── AppShell.tsx     # Responsive shell with Blend switcher and notifications
-│       ├── dashboard/
-│       │   └── HomeDashboard.tsx# Net balance hero, period commute spend, and quick invite
-│       ├── common/
-│       │   └── TransportIcon.tsx# Clean vector Lucide icons for transit modes
-│       ├── forms/
-│       │   ├── AddExpenseModal.tsx       # Fast entry with immutable authenticated payer
-│       │   ├── EditExpenseModal.tsx      # Creator-only edit modal
-│       │   ├── BlendModal.tsx            # Blend switcher, create blend, join via code
-│       │   └── RecordSettlementModal.tsx # Repayment modal with creditor-only filtering
-│       ├── settlements/
-│       │   ├── SettlementFlowModal.tsx   # UPI deep link, QR details, and proof upload
-│       │   └── ProofReviewModal.tsx      # Creditor confirmation & rejection workflow
-│       ├── notifications/
-│       │   └── NotificationDrawer.tsx    # Slide-over notification panel
-│       ├── settings/
-│       │   └── PaymentSettingsModal.tsx  # User UPI ID & QR code verification
-│       ├── activity/
-│       │   ├── ActivityView.tsx          # Chronological log with rides + repayments
-│       │   ├── ExpenseItem.tsx           # Ride card
-│       │   └── RepaymentItem.tsx         # Repayment card
-│       └── balances/
-│           └── BalancesView.tsx          # Suggested settlements and individual balances
-```
-
----
-
-## 6. How to Run Locally
-
-### 1. Install & Start Dev Server
+### A. Run Web App Locally
 ```powershell
 npm install
 npm run dev
 ```
 Open **`http://localhost:5173/`** in your browser.
 
-### 2. Testing Multi-User Flows Locally
-- Open the user menu in the top navigation to access the **Account Switcher**.
-- Switch between demo accounts or create your own with a name and email.
-- Copy your 6-character code and connect from another account to form a Blend.
-- Add an expense: observe that the payer is locked to your account.
-- Switch users to test balance calculations, creditor-only repayment filtering, and screenshot proof confirmation.
+### B. Download Standalone Installers
+Binaries are stored in `public/downloads/`:
+- **Android App (.apk)**: `public/downloads/expenso.apk` (5.3 MB)
+- **Windows Setup Wizard (.exe)**: `public/downloads/Expenso-Setup.exe` (1.9 MB)
+- **Windows Portable (.exe)**: `public/downloads/Expenso.exe` (1.1 MB)
 
-### 3. Connecting to Supabase Cloud
-1. Create a project at [supabase.com](https://supabase.com).
-2. Run `supabase/schema.sql` in the Supabase SQL Editor.
-3. In `d:\Expenso`, create a `.env` file:
-   ```env
-   VITE_SUPABASE_URL=https://your-project.supabase.co
-   VITE_SUPABASE_ANON_KEY=your-anon-key
-   ```
-4. Restart the dev server. Expenso will automatically sync with live Supabase cloud storage.
+---
+
+## 6. Project Structure
+
+```
+d:/Projects/Expenso/Expenso Website/
+├── public/
+│   ├── downloads/
+│   │   ├── expenso.apk          # Native Android APK binary
+│   │   ├── Expenso-Setup.exe    # Windows Setup Installer wizard
+│   │   └── Expenso.exe          # Standalone portable Windows executable
+│   └── gallery/                 # High-resolution screenshot showcase assets
+├── src/
+│   ├── types/
+│   │   ├── index.ts             # UserProfile, Blend, Expense, Settlement, Notification types
+│   │   └── desktop.d.ts         # Desktop API definitions
+│   ├── services/
+│   │   ├── backendService.ts    # Unified repository interface (Supabase + Sandbox)
+│   │   ├── sandboxBackend.ts    # Simulated multi-account sandbox (offline mode)
+│   │   ├── geminiPaymentVerifier.ts # Google Gemini AI Vision verification
+│   │   ├── deviceNotificationService.ts # Device Web & Native notifications
+│   │   ├── upiPaymentService.ts # UPI deep links and automated resolver
+│   │   └── supabase.ts          # Supabase client initializer
+│   ├── utils/
+│   │   ├── authSession.ts       # 60-day session token & login history
+│   │   ├── calculations.ts      # Pure math engine (paise shares, balances, greedy settlements)
+│   │   ├── currency.ts          # INR currency formatting and paise conversion
+│   │   ├── dates.ts             # Indian local time and period filters
+│   │   ├── inviteCodes.ts       # 6-character code generator & validator
+│   │   └── upi.ts               # UPI URI generator, QR decoder, and VPA validator
+│   ├── context/
+│   │   └── AppContext.tsx       # Global state management, notifications, and auth sessions
+│   └── components/
+│       ├── public/
+│       │   └── LandingPage.tsx  # Product showcase, download center & commute simulator
+│       ├── activity/
+│       │   ├── ActivityView.tsx # Chronological log with CSV Export button
+│       │   └── ExpenseDetailsModal.tsx # Ride breakdown modal
+│       ├── desktop/
+│       │   └── DesktopShortcutsModal.tsx # Keyboard shortcuts cheat sheet
+│       ├── settlements/
+│       │   ├── SettlementFlowModal.tsx # Ctrl+V paste, drag-and-drop proof, UPI launcher
+│       │   └── ProofReviewModal.tsx # Gemini AI inspection & creditor approval
+│       ├── onboarding/
+│       │   ├── OnboardingModal.tsx # 4-step progressive onboarding with UPI setup
+│       │   └── MobileWelcomePage.tsx # OAuth & Email welcome screen
+│       └── notifications/
+│           ├── NotificationDrawer.tsx # Real-time notification drawer with split shares
+│           └── NotificationPermissionModal.tsx # Device notification permission prompt
+```
 
 ---
 

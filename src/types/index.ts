@@ -134,7 +134,8 @@ export type NotificationType =
   | 'settlement_proof_submitted'
   | 'settlement_confirmed'
   | 'settlement_rejected'
-  | 'blend_invite';
+  | 'blend_invite'
+  | 'expense_added';
 
 export interface InAppNotification {
   id: string;
@@ -144,6 +145,7 @@ export interface InAppNotification {
   title: string;
   message: string;
   settlementId?: string;
+  expenseId?: string;
   amountPaise?: number;
   actorId: string; // Who triggered it
   proofImageUrl?: string;

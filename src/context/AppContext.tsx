@@ -23,11 +23,24 @@ import {
   calculateTotalSpend,
 } from '../utils/calculations';
 import { filterExpensesByPeriod } from '../utils/dates';
+import { deviceNotificationService } from '../services/deviceNotificationService';
+import {
+  saveAuthSession,
+  getValidAuthSession,
+  clearAuthSession,
+} from '../utils/authSession';
+
+const AUTH_STORAGE_KEY = 'expenso_auth_status';
 
 interface ToastState {
   id: string;
   message: string;
   type: 'success' | 'info' | 'error';
+}
+
+export interface OnboardingOptions {
+  startStep?: 1 | 2 | 3 | 4;
+  oauthProvider?: 'google' | 'github';
 }
 
 interface AppContextType {
@@ -135,7 +148,8 @@ interface AppContextType {
   showLandingPage: boolean;
   setShowLandingPage: (show: boolean) => void;
   isOnboardingOpen: boolean;
-  openOnboarding: () => void;
+  onboardingOptions: OnboardingOptions;
+  openOnboarding: (options?: OnboardingOptions) => void;
   closeOnboarding: () => void;
   isLoginOpen: boolean;
   openLogin: () => void;
@@ -152,6 +166,10 @@ interface AppContextType {
   closeNotificationDrawer: () => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
+  isNotificationPromptOpen: boolean;
+  openNotificationPrompt: () => void;
+  closeNotificationPrompt: () => void;
+  requestDeviceNotificationPermission: () => Promise<boolean>;
 
   // Proof Review Modal
   reviewingSettlement: Settlement | null;
@@ -188,7 +206,21 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const ACTIVE_BLEND_STORAGE_KEY = 'expenso_active_blend_id';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<UserProfile>(() => sandboxBackend.getCurrentUser());
+  const [currentUser, setCurrentUser] = useState<UserProfile>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const { session, expired } = getValidAuthSession();
+        if (!expired && session?.userId) {
+          const found = sandboxBackend.getUserById(session.userId);
+          if (found) {
+            sandboxBackend.switchActiveUser(found.id);
+            return found;
+          }
+        }
+      }
+    } catch {}
+    return sandboxBackend.getCurrentUser();
+  });
   const [userBlends, setUserBlends] = useState<Blend[]>([]);
   const [currentBlend, setCurrentBlend] = useState<Blend | null>(null);
   const [blendMembers, setBlendMembers] = useState<BlendMember[]>([]);
@@ -200,14 +232,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('today');
   const [toast, setToast] = useState<ToastState | null>(null);
 
-  // Public Landing Page & Onboarding auth persistence
-  const AUTH_STORAGE_KEY = 'expenso_auth_status';
-
+  // Authenticated Session Token (rotates every 24h, expires after 60 days inactivity)
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     try {
       if (typeof window !== 'undefined') {
-        const authStatus = localStorage.getItem(AUTH_STORAGE_KEY);
-        return authStatus === 'logged_in';
+        const { session, expired } = getValidAuthSession();
+        if (expired || !session) return false;
+        return true;
       }
     } catch {
       // In case of restricted environment
@@ -218,9 +249,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [showLandingPage, setShowLandingPageState] = useState<boolean>(() => {
     try {
       if (typeof window !== 'undefined') {
-        const authStatus = localStorage.getItem(AUTH_STORAGE_KEY);
-        // Default to public landing page unless user is actively logged in
-        return authStatus !== 'logged_in';
+        const { session, expired } = getValidAuthSession();
+        if (expired || !session) return true;
+        return false;
       }
     } catch {
       // In case of restricted environment
@@ -233,11 +264,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [onboardingOptions, setOnboardingOptions] = useState<OnboardingOptions>({ startStep: 1 });
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+
+  const openOnboarding = useCallback((options?: OnboardingOptions) => {
+    setOnboardingOptions(options ?? { startStep: 1 });
+    setIsOnboardingOpen(true);
+  }, []);
+
+  const closeOnboarding = useCallback(() => {
+    setIsOnboardingOpen(false);
+    setOnboardingOptions({ startStep: 1 });
+  }, []);
 
   // In-App Notifications
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
   const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
+  const [isNotificationPromptOpen, setIsNotificationPromptOpen] = useState(false);
+
+  const openNotificationPrompt = useCallback(() => {
+    setIsNotificationPromptOpen(true);
+  }, []);
+
+  const closeNotificationPrompt = useCallback(() => {
+    setIsNotificationPromptOpen(false);
+  }, []);
+
+  const requestDeviceNotificationPermission = useCallback(async () => {
+    const granted = await deviceNotificationService.requestPermission();
+    return granted;
+  }, []);
 
   // Proof Review & Payment Settings
   const [reviewingSettlement, setReviewingSettlement] = useState<Settlement | null>(null);
@@ -275,25 +331,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let activeB = blends.find(b => b.id === preferredId) || blends[0] || null;
       setCurrentBlend(activeB);
 
+      // Fetch user notifications across all blends
+      const notifsData = await backendService.getNotifications(user.id);
+      setNotifications(notifsData);
+      for (const n of notifsData) {
+        if (!n.isRead && n.userId === user.id) {
+          deviceNotificationService.sendDeviceNotification(n);
+        }
+      }
+
       if (activeB) {
         if (typeof window !== 'undefined') {
           localStorage.setItem(ACTIVE_BLEND_STORAGE_KEY, activeB.id);
         }
-        const [membersData, expensesData, settlementsData, notifsData] = await Promise.all([
+        const [membersData, expensesData, settlementsData] = await Promise.all([
           backendService.getBlendMembers(activeB.id),
           backendService.getBlendExpenses(activeB.id),
           backendService.getBlendSettlements(activeB.id),
-          backendService.getNotifications(user.id),
         ]);
         setBlendMembers(membersData);
         setExpenses(expensesData);
         setSettlements(settlementsData);
-        setNotifications(notifsData);
       } else {
         setBlendMembers([]);
         setExpenses([]);
         setSettlements([]);
-        setNotifications([]);
       }
     } catch (err: unknown) {
       console.error('Failed to load blend data:', err);
@@ -303,7 +365,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentBlend?.id, showToast]);
 
   useEffect(() => {
+    // 1. Session Token Validation & 60-Day Inactivity Check
+    const { session, expired } = getValidAuthSession();
+    if (expired) {
+      setIsLoggedIn(false);
+      setShowLandingPageState(true);
+      clearAuthSession();
+      showToast('Your session expired after 60 days of inactivity. Please sign in again.', 'info');
+    } else if (session?.userId) {
+      const existingUser = sandboxBackend.getUserById(session.userId);
+      if (existingUser) {
+        sandboxBackend.switchActiveUser(existingUser.id);
+        setCurrentUser(existingUser);
+        setIsLoggedIn(true);
+        setShowLandingPageState(false);
+      }
+    }
+
     reloadData();
+
+    // 2. Initialize native notification channel & click listener
+    deviceNotificationService.init((notifId) => {
+      setIsNotificationDrawerOpen(true);
+      if (notifId) {
+        backendService.markNotificationRead(notifId);
+      }
+    });
+
+    // 3. Periodic 24-Hour Token Refresh Check
+    const tokenRefreshTimer = setInterval(() => {
+      getValidAuthSession(); // Automatically refreshes token every 24 hours while keeping user signed in
+    }, 60 * 60 * 1000); // Check every hour
+
+    // Prompt user to allow notifications when they open app for the first time
+    let promptTimer: ReturnType<typeof setTimeout> | undefined;
+    if (!deviceNotificationService.hasPrompted()) {
+      promptTimer = setTimeout(() => {
+        setIsNotificationPromptOpen(true);
+      }, 1500);
+    }
+
+    return () => {
+      clearInterval(tokenRefreshTimer);
+      if (promptTimer) clearTimeout(promptTimer);
+    };
   }, []); // Run on initial mount
 
   // Supabase Realtime channel setup when cloud backend is configured
@@ -347,7 +452,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.removeChannel(channel);
       }
     };
-  }, [currentBlend?.id, reloadData]);
+  }, [currentBlend?.id, currentUser.id, reloadData]);
 
   // Realtime & Cross-tab broadcast listener for instant sync
   useEffect(() => {
@@ -357,7 +462,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         blend?: { id: string };
         expense?: { blendId?: string };
         settlement?: { blendId?: string };
+        notification?: InAppNotification;
       } | undefined;
+
+      // Deliver incoming notification to device shade in real time
+      if (p?.notification && p.notification.userId === currentUser.id) {
+        deviceNotificationService.sendDeviceNotification(p.notification);
+      }
+
       const targetId = p?.blendId || p?.blend?.id || p?.expense?.blendId || p?.settlement?.blendId || currentBlend?.id;
       reloadData(targetId);
     };
@@ -365,7 +477,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       backendService.offSync(handleSync);
     };
-  }, [currentBlend?.id, reloadData]);
+  }, [currentBlend?.id, currentUser.id, reloadData]);
 
   // Derived Members list for views & calculations
   const members: Member[] = useMemo(() => {
@@ -729,13 +841,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       setCurrentUser(user);
       setIsLoggedIn(true);
-      try {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(AUTH_STORAGE_KEY, 'logged_in');
-        }
-      } catch (e) {
-        console.warn('Could not persist auth status to localStorage', e);
-      }
+      // Generate and save 24h rotating session token (with 60-day expiry)
+      saveAuthSession(user);
       setShowLandingPageState(false);
       setIsLoginOpen(false);
       showToast(`Welcome back, ${user.fullName}!`);
@@ -752,13 +859,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const user = await backendService.registerUser(fullName, email, password);
       setCurrentUser(user);
       setIsLoggedIn(true);
-      try {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(AUTH_STORAGE_KEY, 'logged_in');
-        }
-      } catch (e) {
-        console.warn('Could not persist auth status to localStorage', e);
-      }
+      // Generate and save 24h rotating session token (with 60-day expiry)
+      saveAuthSession(user);
       setShowLandingPageState(false);
       showToast(`Account created! Welcome, ${user.fullName}`);
       await reloadData();
@@ -772,13 +874,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const logout = useCallback(() => {
     setIsLoggedIn(false);
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(AUTH_STORAGE_KEY, 'logged_out');
-      }
-    } catch (e) {
-      console.warn('Could not persist auth status to localStorage', e);
-    }
+    // Clear session token from user cache
+    clearAuthSession();
     setShowLandingPageState(true);
     setIsNotificationDrawerOpen(false);
     setIsPaymentSettingsOpen(false);
@@ -955,8 +1052,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         showLandingPage,
         setShowLandingPage,
         isOnboardingOpen,
-        openOnboarding: () => setIsOnboardingOpen(true),
-        closeOnboarding: () => setIsOnboardingOpen(false),
+        onboardingOptions,
+        openOnboarding,
+        closeOnboarding,
         isLoginOpen,
         openLogin: () => setIsLoginOpen(true),
         closeLogin: () => setIsLoginOpen(false),
@@ -972,6 +1070,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         closeNotificationDrawer: () => setIsNotificationDrawerOpen(false),
         markNotificationRead,
         markAllNotificationsRead,
+        isNotificationPromptOpen,
+        openNotificationPrompt,
+        closeNotificationPrompt,
+        requestDeviceNotificationPermission,
 
         // Proof Review Modal
         reviewingSettlement,

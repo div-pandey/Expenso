@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { buildSafeUpiUri, isValidUpiId } from '../../utils/upi';
 import { formatCurrency } from '../../utils/currency';
+import { launchUpiApp, resolveRecipientUpi, UPI_APP_PACKAGES } from '../../services/upiPaymentService';
 import {
   verifyPaymentProofWithGemini,
   getGeminiApiKey,
@@ -59,15 +60,15 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
   const [initiating, setInitiating] = useState(false);
   const [settlement, setSettlement] = useState<Settlement | null>(null);
   const [customUpi, setCustomUpi] = useState<string>(() => {
-    return toMember?.paymentMethod?.upiId || (typeof localStorage !== 'undefined' ? localStorage.getItem(`expenso_recipient_upi_${toMemberId}`) || '' : '');
+    return resolveRecipientUpi(toMemberId, toMember?.name);
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (toMemberId) {
-      const upi = toMember?.paymentMethod?.upiId || (typeof localStorage !== 'undefined' ? localStorage.getItem(`expenso_recipient_upi_${toMemberId}`) || '' : '');
+      const upi = resolveRecipientUpi(toMemberId, toMember?.name);
       if (upi) setCustomUpi(upi);
     }
-  }, [toMemberId, toMember?.paymentMethod?.upiId]);
+  }, [toMemberId, toMember?.name, toMember?.paymentMethod?.upiId]);
   const [showQrCode, setShowQrCode] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [utrNumber, setUtrNumber] = useState('');
@@ -191,6 +192,41 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
     }
   };
 
+  const handlePayViaUpi = async (packageName?: string) => {
+    if (!upiDeepLink) {
+      showToast('Please enter a valid UPI ID first', 'error');
+      return;
+    }
+
+    if (effectiveUpi && hasValidUpi) {
+      try {
+        localStorage.setItem(`expenso_recipient_upi_${toMemberId}`, effectiveUpi);
+      } catch {}
+    }
+
+    // Auto-initiate settlement in the background so step 2 is ready on return
+    if (!settlement) {
+      try {
+        setInitiating(true);
+        const s = await initiateSettlement({ toMemberId, amountPaise });
+        setSettlement(s);
+        setStep(2);
+      } catch (err) {
+        console.warn('Auto initiate error:', err);
+      } finally {
+        setInitiating(false);
+      }
+    } else {
+      setStep(2);
+    }
+
+    showToast('Redirecting to UPI payment…');
+    const launched = await launchUpiApp(upiDeepLink, packageName);
+    if (!launched) {
+      showToast('Could not open UPI app automatically. You can copy the UPI ID or scan QR code.', 'info');
+    }
+  };
+
   const handleCopyUpi = () => {
     if (!effectiveUpi) return;
     navigator.clipboard.writeText(effectiveUpi);
@@ -199,12 +235,17 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
     setTimeout(() => setCopiedUpi(false), 2000);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const processProofFile = (file: File) => {
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { showToast('Screenshot must be under 5MB', 'error'); return; }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Screenshot must be under 5MB', 'error');
+      return;
+    }
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    if (!validTypes.includes(file.type)) { showToast('Upload a PNG, JPG or WebP image', 'error'); return; }
+    if (!validTypes.includes(file.type)) {
+      showToast('Upload a PNG, JPG or WebP image', 'error');
+      return;
+    }
     setProofFile(file);
     const reader = new FileReader();
     reader.onload = async () => {
@@ -214,6 +255,32 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
     };
     reader.readAsDataURL(file);
   };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processProofFile(file);
+  };
+
+  // Support Desktop Clipboard Paste (Ctrl+V) for Payment Screenshots
+  useEffect(() => {
+    if (step !== 2) return;
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          const file = items[i].getAsFile();
+          if (file) {
+            processProofFile(file);
+            showToast('Pasted screenshot from clipboard!');
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [step]);
 
   const handleRemoveProof = () => {
     setProofFile(null);
@@ -306,50 +373,142 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
               </div>
             </div>
 
-            {hasValidUpi ? (
-              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5 text-emerald-800 font-bold"><QrCode className="w-3.5 h-3.5" />UPI Payment Details</div>
-                  <span className="text-[10px] text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-semibold">Active</span>
+            {/* Recipient UPI Details Card (Always Pre-filled from Signup) */}
+            <div className="p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200 space-y-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5 text-emerald-900 font-bold">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>{toMember?.name}&apos;s UPI Details</span>
                 </div>
-                <p className="font-mono text-sm font-bold text-charcoal-900">{effectiveUpi}</p>
-                <p className="text-xs text-charcoal-600">{toMember?.paymentMethod?.payeeName || toMember?.name}</p>
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+                  Auto-filled from signup
+                </span>
               </div>
-            ) : (
-              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 space-y-2 text-xs text-amber-800">
-                <div className="flex items-center gap-1.5 font-bold"><AlertCircle className="w-4 h-4 shrink-0" />Enter {toMember?.name}&apos;s UPI ID</div>
-                <input
-                  type="text"
-                  placeholder="e.g. 9876543210@paytm or name@okaxis"
-                  value={customUpi}
-                  onChange={e => setCustomUpi(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-white text-charcoal-900 font-mono border border-amber-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-600 shadow-subtle"
-                />
-                <div className="flex flex-wrap items-center gap-1 text-[10px]">
-                  <span className="text-amber-900 font-semibold mr-0.5">Quick handle:</span>
-                  {COMMON_UPI_HANDLES.map(handle => (
-                    <button
-                      type="button"
-                      key={handle}
-                      onClick={() => handleApplyHandle(handle)}
-                      className="px-2 py-0.5 bg-white border border-amber-300 hover:bg-amber-100 text-amber-900 rounded font-medium transition-colors"
-                    >
-                      {handle}
-                    </button>
-                  ))}
+
+              <div className="bg-white border border-emerald-200 rounded-xl p-3 flex items-center justify-between gap-2 shadow-subtle">
+                <div className="min-w-0">
+                  <p className="text-[10px] text-charcoal-400 font-bold uppercase tracking-wider">Payee UPI ID</p>
+                  <p className="font-mono text-sm font-black text-charcoal-900 truncate">{effectiveUpi}</p>
+                  <p className="text-xs text-charcoal-600 truncate">{toMember?.paymentMethod?.payeeName || toMember?.name}</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleCopyUpi}
+                  className="px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-300 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition-colors flex items-center gap-1 shrink-0"
+                >
+                  {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
+                </button>
               </div>
-            )}
 
-            <p className="text-[10px] text-charcoal-400 leading-relaxed bg-warm-50 rounded-xl p-3 border border-warm-200">
-              Notice: Expenso opens your UPI app but <strong>cannot verify</strong> payment success. A settlement is only officially cleared when the recipient confirms your screenshot.
-            </p>
+              {/* Editable fallback toggle */}
+              <details className="text-xs text-charcoal-600">
+                <summary className="cursor-pointer text-[11px] font-semibold text-emerald-800 hover:underline">
+                  Change UPI ID manually
+                </summary>
+                <div className="mt-2 space-y-1.5 pt-1">
+                  <input
+                    type="text"
+                    placeholder="e.g. 9876543210@paytm or name@okaxis"
+                    value={customUpi}
+                    onChange={e => setCustomUpi(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-white text-charcoal-900 font-mono border border-emerald-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-600 shadow-subtle"
+                  />
+                  <div className="flex flex-wrap items-center gap-1 text-[10px]">
+                    <span className="text-amber-900 font-semibold mr-0.5">Quick handle:</span>
+                    {COMMON_UPI_HANDLES.map(handle => (
+                      <button
+                        type="button"
+                        key={handle}
+                        onClick={() => handleApplyHandle(handle)}
+                        className="px-2 py-0.5 bg-white border border-amber-300 hover:bg-amber-100 text-amber-900 rounded font-medium transition-colors"
+                      >
+                        {handle}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </details>
+            </div>
 
-            <div className="flex gap-3">
-              <button onClick={handleCancel} className="btn-action-secondary flex-1 px-4 py-3 rounded-xl border border-warm-300 text-sm font-bold text-charcoal-700">Cancel</button>
-              <button onClick={handleInitiate} disabled={initiating} className="btn-action-primary group flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-brand-700 hover:bg-brand-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl shadow-card">
+            {/* Direct Pay via UPI App Action & Shortcuts */}
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handlePayViaUpi()}
+                disabled={initiating || !hasValidUpi}
+                className="btn-action-primary group relative overflow-hidden flex items-center justify-center gap-2.5 w-full py-4 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-sm sm:text-base font-black rounded-2xl shadow-elevated transition-all cursor-pointer"
+              >
+                <Smartphone className="w-5 h-5 group-hover:scale-110 transition-transform shrink-0" />
+                <span>Pay {formatCurrency(amountPaise)} via UPI App</span>
+                <ExternalLink className="w-4 h-4 opacity-80 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0" />
+              </button>
+
+              {/* 1-Tap App Shortcuts */}
+              <div className="grid grid-cols-4 gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handlePayViaUpi(UPI_APP_PACKAGES.gpay)}
+                  disabled={!hasValidUpi}
+                  className="py-2 px-1 bg-white hover:bg-emerald-50 border border-warm-200 rounded-xl text-center shadow-subtle transition-all cursor-pointer"
+                >
+                  <p className="text-[11px] font-bold text-charcoal-800">GPay</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePayViaUpi(UPI_APP_PACKAGES.phonepe)}
+                  disabled={!hasValidUpi}
+                  className="py-2 px-1 bg-white hover:bg-emerald-50 border border-warm-200 rounded-xl text-center shadow-subtle transition-all cursor-pointer"
+                >
+                  <p className="text-[11px] font-bold text-charcoal-800">PhonePe</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePayViaUpi(UPI_APP_PACKAGES.paytm)}
+                  disabled={!hasValidUpi}
+                  className="py-2 px-1 bg-white hover:bg-emerald-50 border border-warm-200 rounded-xl text-center shadow-subtle transition-all cursor-pointer"
+                >
+                  <p className="text-[11px] font-bold text-charcoal-800">Paytm</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePayViaUpi(UPI_APP_PACKAGES.bhim)}
+                  disabled={!hasValidUpi}
+                  className="py-2 px-1 bg-white hover:bg-emerald-50 border border-warm-200 rounded-xl text-center shadow-subtle transition-all cursor-pointer"
+                >
+                  <p className="text-[11px] font-bold text-charcoal-800">BHIM</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Scan to Pay toggle */}
+            <div className="pt-0.5 text-center">
+              <button
+                type="button"
+                onClick={() => setShowQrCode(!showQrCode)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 transition-colors"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>{showQrCode ? 'Hide QR Code' : 'Or show UPI QR Code to scan'}</span>
+              </button>
+
+              {showQrCode && upiDeepLink && (
+                <div className="mt-2.5 p-3.5 bg-white rounded-2xl border border-emerald-200 flex flex-col items-center justify-center space-y-1.5 shadow-subtle animate-pop-in">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(upiDeepLink)}`}
+                    alt="UPI QR"
+                    className="w-36 h-36 object-contain rounded-xl border border-warm-200 p-1"
+                  />
+                  <p className="text-xs font-bold text-charcoal-800">Scan with any UPI App</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2.5 pt-1">
+              <button onClick={handleCancel} className="btn-action-secondary flex-1 px-4 py-3 rounded-xl border border-warm-300 text-xs sm:text-sm font-bold text-charcoal-700">Cancel</button>
+              <button onClick={handleInitiate} disabled={initiating || !hasValidUpi} className="btn-action-primary group flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-brand-700 hover:bg-brand-800 disabled:opacity-60 text-white text-xs sm:text-sm font-bold rounded-xl shadow-card">
                 {initiating && <Loader2 className="w-4 h-4 animate-spin" />}
-                {initiating ? 'Starting...' : 'Initiate Settlement'}
+                <span>{initiating ? 'Starting...' : 'Skip to Proof Upload'}</span>
                 {!initiating && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />}
               </button>
             </div>
@@ -376,24 +535,46 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
                   </div>
                 </div>
 
-                <a
-                  href={upiDeepLink}
-                  target="_self"
-                  className="btn-action-primary group relative overflow-hidden flex items-center justify-center gap-2.5 w-full px-5 py-4 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold rounded-xl shadow-card"
+                <button
+                  type="button"
+                  onClick={() => handlePayViaUpi()}
+                  className="btn-action-primary group relative overflow-hidden flex items-center justify-center gap-2.5 w-full px-5 py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold rounded-xl shadow-card cursor-pointer"
                 >
-                  <Smartphone className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
+                  <Smartphone className="w-5 h-5 group-hover:scale-110 transition-transform duration-200 shrink-0" />
                   <span>Pay {formatCurrency(amountPaise)} via UPI App</span>
-                  <ExternalLink className="w-4 h-4 opacity-75 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
-                  <div className="absolute inset-0 animate-shimmer pointer-events-none opacity-40" />
-                </a>
+                  <ExternalLink className="w-4 h-4 opacity-75 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200 shrink-0" />
+                </button>
 
-                {/* Popular App Compatibility Badges */}
-                <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-charcoal-400">
-                  <span>Redirects to:</span>
-                  <span className="px-1.5 py-0.5 bg-warm-100 rounded border border-warm-200 text-charcoal-600">Google Pay</span>
-                  <span className="px-1.5 py-0.5 bg-warm-100 rounded border border-warm-200 text-charcoal-600">PhonePe</span>
-                  <span className="px-1.5 py-0.5 bg-warm-100 rounded border border-warm-200 text-charcoal-600">Paytm</span>
-                  <span className="px-1.5 py-0.5 bg-warm-100 rounded border border-warm-200 text-charcoal-600">BHIM</span>
+                {/* 1-Tap App Shortcuts */}
+                <div className="grid grid-cols-4 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handlePayViaUpi(UPI_APP_PACKAGES.gpay)}
+                    className="py-1.5 px-1 bg-warm-100 hover:bg-warm-200 rounded-lg text-center border border-warm-200 text-[11px] font-bold text-charcoal-800 transition-colors cursor-pointer"
+                  >
+                    GPay
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePayViaUpi(UPI_APP_PACKAGES.phonepe)}
+                    className="py-1.5 px-1 bg-warm-100 hover:bg-warm-200 rounded-lg text-center border border-warm-200 text-[11px] font-bold text-charcoal-800 transition-colors cursor-pointer"
+                  >
+                    PhonePe
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePayViaUpi(UPI_APP_PACKAGES.paytm)}
+                    className="py-1.5 px-1 bg-warm-100 hover:bg-warm-200 rounded-lg text-center border border-warm-200 text-[11px] font-bold text-charcoal-800 transition-colors cursor-pointer"
+                  >
+                    Paytm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePayViaUpi(UPI_APP_PACKAGES.bhim)}
+                    className="py-1.5 px-1 bg-warm-100 hover:bg-warm-200 rounded-lg text-center border border-warm-200 text-[11px] font-bold text-charcoal-800 transition-colors cursor-pointer"
+                  >
+                    BHIM
+                  </button>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -640,10 +821,30 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
                 )}
               </div>
             ) : (
-              <label htmlFor="proof-upload" className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-warm-300 hover:border-brand-400 hover:bg-brand-50/40 cursor-pointer transition-all duration-200 group">
-                <Upload className="w-6 h-6 text-charcoal-400 group-hover:scale-110 group-hover:text-brand-700 transition-all duration-200" />
-                <p className="text-xs font-semibold text-charcoal-600 group-hover:text-charcoal-900 transition-colors">Upload payment confirmation screenshot</p>
-                <p className="text-[10px] text-charcoal-400">PNG, JPG, WebP · Max 5MB · AI Verified</p>
+              <label
+                htmlFor="proof-upload"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) {
+                    processProofFile(file);
+                    showToast('Screenshot dropped!');
+                  }
+                }}
+                className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed border-warm-300 hover:border-brand-500 hover:bg-brand-50/50 cursor-pointer transition-all duration-200 group bg-white/60"
+              >
+                <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-bold text-charcoal-800 group-hover:text-brand-900 transition-colors">
+                    Upload, Drop or Paste (Ctrl+V) Screenshot
+                  </p>
+                  <p className="text-[11px] text-charcoal-400 mt-0.5">
+                    PNG, JPG, WebP · Max 5MB · AI Verified
+                  </p>
+                </div>
                 <input ref={fileInputRef} id="proof-upload" type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={handleFileChange} />
               </label>
             )}
