@@ -254,7 +254,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           isHeaderVisible ? 'translate-y-0 shadow-sm' : '-translate-y-full'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-3.5 sm:px-8 lg:px-12 min-h-[60px] sm:min-h-[80px] py-2 sm:py-3.5 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 h-18 sm:h-20 flex items-center justify-between gap-4">
+          {/* Logo & Brand Wordmark */}
           <div
             onClick={() => {
               if (isLoggedIn) {
@@ -263,61 +264,82 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }
             }}
-            className="cursor-pointer hover:opacity-90 active:scale-95 transition-all flex items-center gap-3"
+            className="cursor-pointer hover:opacity-90 active:scale-95 transition-all flex items-center gap-3 shrink-0"
             title={isLoggedIn ? 'Return to Expenso Dashboard' : 'Expenso Home'}
           >
             <BrandWordmark size="md" />
-            <span className="hidden xl:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-brand-50 text-brand-800 border border-brand-200">
-              Web • Android • Windows
+            <span className="hidden 2xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-brand-50 text-brand-800 border border-brand-200 whitespace-nowrap shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Android · Windows · Web</span>
             </span>
           </div>
 
-          <nav className="hidden lg:flex items-center gap-6 text-xs xl:text-sm font-bold text-charcoal-600">
-            <button onClick={() => scrollToSection('downloads')} className="hover:text-charcoal-900 transition-colors flex items-center gap-1 text-brand-800">
-              <Download className="w-3.5 h-3.5" />
+          {/* Navigation Links with Generous Spacing and No Text Wrapping */}
+          <nav className="hidden lg:flex items-center gap-1.5 xl:gap-3 text-xs xl:text-sm font-bold text-charcoal-600">
+            <button
+              onClick={() => scrollToSection('downloads')}
+              className="whitespace-nowrap shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-brand-800 hover:text-brand-900 hover:bg-brand-50/80 transition-all cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-brand-700 shrink-0" />
               <span>Get Apps</span>
             </button>
-            <button onClick={() => scrollToSection('showcase')} className="hover:text-charcoal-900 transition-colors">
+            <button
+              onClick={() => scrollToSection('showcase')}
+              className="whitespace-nowrap shrink-0 px-3 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
+            >
               App Gallery
             </button>
-            <button onClick={() => scrollToSection('features')} className="hover:text-charcoal-900 transition-colors">
+            <button
+              onClick={() => scrollToSection('features')}
+              className="whitespace-nowrap shrink-0 px-3 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
+            >
               Features
             </button>
-            <button onClick={() => scrollToSection('scenarios')} className="hover:text-charcoal-900 transition-colors">
+            <button
+              onClick={() => scrollToSection('scenarios')}
+              className="whitespace-nowrap shrink-0 px-3 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
+            >
               Commute Simulator
             </button>
-            <button onClick={() => scrollToSection('comparison')} className="hover:text-charcoal-900 transition-colors">
+            <button
+              onClick={() => scrollToSection('comparison')}
+              className="whitespace-nowrap shrink-0 px-3 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
+            >
               Why Expenso
             </button>
-            <button onClick={() => scrollToSection('faq')} className="hover:text-charcoal-900 transition-colors">
+            <button
+              onClick={() => scrollToSection('faq')}
+              className="whitespace-nowrap shrink-0 px-3 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
+            >
               FAQ
             </button>
           </nav>
 
-          <div className="flex items-center gap-1.5 sm:gap-3">
+          {/* Header Action Buttons */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {isLoggedIn ? (
               <button
                 onClick={() => setShowLandingPage(false)}
-                className="btn-action-primary group relative overflow-hidden flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-brand-700 hover:bg-brand-800 text-white text-xs sm:text-sm font-bold rounded-xl shadow-card active:scale-95 transition-all"
+                className="btn-action-primary group relative overflow-hidden flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-brand-700 hover:bg-brand-800 text-white text-xs sm:text-sm font-bold rounded-xl shadow-card active:scale-95 transition-all whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <span className="relative z-10">Dashboard</span>
-                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 relative z-10 group-hover:translate-x-1 transition-transform duration-200" />
+                <ArrowRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform duration-200" />
                 <div className="absolute inset-0 animate-shimmer pointer-events-none opacity-40" />
               </button>
             ) : (
               <>
                 <button
                   onClick={onLogin}
-                  className="text-xs sm:text-sm font-bold text-charcoal-700 hover:text-charcoal-900 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-xl hover:bg-warm-100 active:scale-95 transition-all duration-150"
+                  className="whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold text-charcoal-700 hover:text-charcoal-900 px-3 sm:px-4 py-2.5 rounded-xl hover:bg-warm-100 active:scale-95 transition-all cursor-pointer"
                 >
                   Sign In
                 </button>
                 <button
                   onClick={onGetStarted}
-                  className="btn-action-primary group relative overflow-hidden flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-brand-700 hover:bg-brand-800 text-white text-xs sm:text-sm font-bold rounded-xl shadow-card"
+                  className="btn-action-primary group relative overflow-hidden flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-brand-700 hover:bg-brand-800 text-white text-xs sm:text-sm font-bold rounded-xl shadow-card whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <span className="relative z-10">Get Started</span>
-                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 relative z-10 group-hover:translate-x-1 transition-transform duration-200" />
+                  <ArrowRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform duration-200" />
                   <div className="absolute inset-0 animate-shimmer pointer-events-none opacity-40" />
                 </button>
               </>

@@ -94,8 +94,6 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
     }
   }, [isOpen]);
 
-  if (!isOpen || toMemberId === currentUser.id) return null;
-
   const effectiveUpi = (customUpi.trim() || toMember?.paymentMethod?.upiId || '').trim();
   const hasValidUpi = isValidUpiId(effectiveUpi);
 
@@ -317,6 +315,8 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
     }
     onClose();
   };
+
+  if (!isOpen || toMemberId === currentUser.id) return null;
 
   const stepLabels = ['Review', 'Pay & Attach', 'Done'];
 
