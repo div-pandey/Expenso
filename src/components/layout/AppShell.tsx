@@ -78,7 +78,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     <div className="min-h-screen bg-warm-50 text-charcoal-900 flex flex-col font-sans selection:bg-brand-100 selection:text-brand-900">
       {/* Top Navigation Bar */}
       <header className="sticky top-0 z-30 bg-warm-50/95 backdrop-blur-md border-b-2 border-warm-200/80 shrink-0 shadow-sm">
-        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2.5 sm:gap-4 lg:gap-6">
+        <div className="w-full px-4 sm:px-8 lg:px-12 h-16 sm:h-20 flex items-center justify-between gap-2.5 sm:gap-4 lg:gap-6">
           {/* Section 1: Brand Logo & Blend Switcher (Left-aligned) */}
           <div className="flex items-center gap-2 sm:gap-3.5 justify-start min-w-0 shrink-0">
             <div

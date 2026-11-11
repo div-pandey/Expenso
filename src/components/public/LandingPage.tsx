@@ -254,8 +254,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           isHeaderVisible ? 'translate-y-0 shadow-sm' : '-translate-y-full'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 h-18 sm:h-20 flex items-center justify-between gap-4">
-          {/* Logo & Brand Wordmark */}
+        <div className="w-full px-4 sm:px-8 lg:px-12 xl:px-16 h-18 sm:h-20 flex items-center justify-between gap-4">
+          {/* Section 1: Logo & Brand Wordmark (Farthest Left Corner) */}
           <div
             onClick={() => {
               if (isLoggedIn) {
@@ -268,55 +268,51 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             title={isLoggedIn ? 'Return to Expenso Dashboard' : 'Expenso Home'}
           >
             <BrandWordmark size="md" />
-            <span className="hidden 2xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-brand-50 text-brand-800 border border-brand-200 whitespace-nowrap shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Android · Windows · Web</span>
-            </span>
           </div>
 
-          {/* Navigation Links with Generous Spacing and No Text Wrapping */}
-          <nav className="hidden lg:flex items-center gap-1.5 xl:gap-3 text-xs xl:text-sm font-bold text-charcoal-600">
+          {/* Section 2: Centered Navigation Links with Generous Spacing */}
+          <nav className="hidden lg:flex items-center gap-2 xl:gap-4 2xl:gap-6 text-xs xl:text-sm font-bold text-charcoal-600">
             <button
               onClick={() => scrollToSection('downloads')}
-              className="whitespace-nowrap shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-brand-800 hover:text-brand-900 hover:bg-brand-50/80 transition-all cursor-pointer"
+              className="whitespace-nowrap shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-brand-800 hover:text-brand-900 hover:bg-brand-50/90 transition-all cursor-pointer"
             >
               <Download className="w-4 h-4 text-brand-700 shrink-0" />
               <span>Get Apps</span>
             </button>
             <button
               onClick={() => scrollToSection('showcase')}
-              className="whitespace-nowrap shrink-0 px-3 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
+              className="whitespace-nowrap shrink-0 px-3.5 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
             >
               App Gallery
             </button>
             <button
               onClick={() => scrollToSection('features')}
-              className="whitespace-nowrap shrink-0 px-3 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
+              className="whitespace-nowrap shrink-0 px-3.5 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
             >
               Features
             </button>
             <button
               onClick={() => scrollToSection('scenarios')}
-              className="whitespace-nowrap shrink-0 px-3 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
+              className="whitespace-nowrap shrink-0 px-3.5 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
             >
               Commute Simulator
             </button>
             <button
               onClick={() => scrollToSection('comparison')}
-              className="whitespace-nowrap shrink-0 px-3 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
+              className="whitespace-nowrap shrink-0 px-3.5 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
             >
               Why Expenso
             </button>
             <button
               onClick={() => scrollToSection('faq')}
-              className="whitespace-nowrap shrink-0 px-3 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
+              className="whitespace-nowrap shrink-0 px-3.5 py-2 rounded-xl hover:text-charcoal-900 hover:bg-warm-100 transition-all cursor-pointer"
             >
               FAQ
             </button>
           </nav>
 
-          {/* Header Action Buttons */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Section 3: Header Action Buttons (Farthest Right Corner) */}
+          <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
             {isLoggedIn ? (
               <button
                 onClick={() => setShowLandingPage(false)}
@@ -330,7 +326,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <>
                 <button
                   onClick={onLogin}
-                  className="whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold text-charcoal-700 hover:text-charcoal-900 px-3 sm:px-4 py-2.5 rounded-xl hover:bg-warm-100 active:scale-95 transition-all cursor-pointer"
+                  className="whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold text-charcoal-700 hover:text-charcoal-900 px-3.5 sm:px-4 py-2.5 rounded-xl hover:bg-warm-100 active:scale-95 transition-all cursor-pointer"
                 >
                   Sign In
                 </button>

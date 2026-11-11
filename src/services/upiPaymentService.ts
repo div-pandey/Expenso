@@ -34,7 +34,7 @@ export async function launchUpiApp(uri: string, _packageName?: string): Promise<
     link.click();
     document.body.removeChild(link);
     return true;
-  } catch (err) {
+  } catch {
     try {
       window.location.href = cleanUri;
       return true;

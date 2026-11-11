@@ -1496,7 +1496,7 @@ class SandboxBackendService {
     // Update in blend members as well
     for (const bm of this.db.blendMembers) {
       if (bm.userId === userId) {
-        bm.role = bm.role; // keep role
+        // preserve role
       }
     }
 
