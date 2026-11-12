@@ -45,6 +45,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [activeGalleryTab, setActiveGalleryTab] = useState<number>(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
+  // Live Interactive Commute Splitter Playground State
+  const [calcPreset, setCalcPreset] = useState<'auto' | 'metro' | 'cab' | 'custom'>('metro');
+  const [calcAmount, setCalcAmount] = useState<number>(160);
+  const [calcCommuters, setCalcCommuters] = useState<number>(4);
+  const [calcSettled, setCalcSettled] = useState<boolean>(false);
+
   // Sticky Smart Header visibility state
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const lastScrollY = useRef(0);
@@ -425,83 +431,207 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* Hero Preview: Minimal, Light Info Box */}
+          {/* Hero Right Column: Interactive Live Commute Splitter Playground */}
           <div className="lg:col-span-5 flex justify-center lg:justify-end">
-            <div className="w-full max-w-sm bg-white rounded-3xl border border-warm-200 shadow-card p-6 sm:p-7 space-y-6">
-              {/* Header */}
+            <div className="w-full max-w-md bg-white rounded-3xl border border-warm-200/90 shadow-card hover:shadow-elevated transition-shadow p-6 sm:p-7 space-y-5">
+              {/* Playground Header */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <ExpensoLogo size="sm" />
                   <div>
-                    <h3 className="font-extrabold text-sm text-charcoal-900 tracking-tight">Active Ride Pool</h3>
-                    <p className="text-xs text-charcoal-400">Campus Commutes</p>
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-brand-700 font-extrabold block">
+                      Interactive Demo
+                    </span>
+                    <h3 className="font-extrabold text-sm text-charcoal-900 tracking-tight">
+                      Live Commute Splitter
+                    </h3>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Synced</span>
+                  Instant Math
+                </span>
+              </div>
+
+              {/* Quick Presets */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-charcoal-400 uppercase tracking-wider block">
+                  Select Typical Ride
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCalcPreset('auto');
+                      setCalcAmount(90);
+                      setCalcCommuters(3);
+                    }}
+                    className={`py-2 px-2 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center gap-0.5 cursor-pointer ${
+                      calcPreset === 'auto'
+                        ? 'bg-brand-50 border-brand-500 text-brand-900 shadow-xs'
+                        : 'bg-warm-50/80 border-warm-200 text-charcoal-600 hover:bg-warm-100 hover:text-charcoal-900'
+                    }`}
+                  >
+                    <span className="text-[11px]">Auto Pool</span>
+                    <span className="font-mono text-xs text-brand-700">₹90</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCalcPreset('metro');
+                      setCalcAmount(160);
+                      setCalcCommuters(4);
+                    }}
+                    className={`py-2 px-2 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center gap-0.5 cursor-pointer ${
+                      calcPreset === 'metro'
+                        ? 'bg-brand-50 border-brand-500 text-brand-900 shadow-xs'
+                        : 'bg-warm-50/80 border-warm-200 text-charcoal-600 hover:bg-warm-100 hover:text-charcoal-900'
+                    }`}
+                  >
+                    <span className="text-[11px]">Metro Route</span>
+                    <span className="font-mono text-xs text-brand-700">₹160</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCalcPreset('cab');
+                      setCalcAmount(320);
+                      setCalcCommuters(4);
+                    }}
+                    className={`py-2 px-2 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center gap-0.5 cursor-pointer ${
+                      calcPreset === 'cab'
+                        ? 'bg-brand-50 border-brand-500 text-brand-900 shadow-xs'
+                        : 'bg-warm-50/80 border-warm-200 text-charcoal-600 hover:bg-warm-100 hover:text-charcoal-900'
+                    }`}
+                  >
+                    <span className="text-[11px]">Late Cab</span>
+                    <span className="font-mono text-xs text-brand-700">₹320</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Commute Spend Summary */}
-              <div className="p-4 rounded-2xl bg-warm-50 border border-warm-200/80 space-y-1">
-                <span className="text-[11px] font-bold text-charcoal-400 uppercase tracking-wider block">
-                  Today's Commute Spend
-                </span>
+              {/* Commuters Counter & Amount adjustment */}
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="p-3 bg-warm-50/90 rounded-2xl border border-warm-200/80 space-y-1">
+                  <span className="text-[10px] font-bold text-charcoal-400 uppercase tracking-wider block">
+                    Fare Amount
+                  </span>
+                  <div className="flex items-center gap-1 font-mono font-black text-lg text-charcoal-900">
+                    <span>₹</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={9999}
+                      value={calcAmount}
+                      onChange={(e) => {
+                        const val = Math.max(1, parseInt(e.target.value) || 0);
+                        setCalcAmount(val);
+                        setCalcPreset('custom');
+                      }}
+                      className="w-full bg-transparent font-mono font-black text-lg text-charcoal-900 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 bg-warm-50/90 rounded-2xl border border-warm-200/80 space-y-1">
+                  <span className="text-[10px] font-bold text-charcoal-400 uppercase tracking-wider block">
+                    Commuters
+                  </span>
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setCalcCommuters((c) => Math.max(2, c - 1))}
+                      className="w-7 h-7 rounded-lg bg-white border border-warm-200 text-charcoal-700 hover:bg-warm-100 flex items-center justify-center font-bold text-sm cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <span className="font-mono font-black text-sm sm:text-base text-charcoal-900">
+                      {calcCommuters} riders
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCalcCommuters((c) => Math.min(8, c + 1))}
+                      className="w-7 h-7 rounded-lg bg-white border border-warm-200 text-charcoal-700 hover:bg-warm-100 flex items-center justify-center font-bold text-sm cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Result Box */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-brand-50/60 border border-brand-200/80 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-charcoal-500 uppercase tracking-wider text-[11px]">
+                    Individual Share
+                  </span>
+                  <span className="font-mono text-[10px] font-bold text-emerald-800 bg-white px-2 py-0.5 rounded-md border border-brand-200">
+                    Paise-Perfect
+                  </span>
+                </div>
+
                 <div className="flex items-baseline justify-between">
-                  <span className="text-2xl sm:text-3xl font-black text-charcoal-900 tracking-tight">
-                    ₹240
-                  </span>
-                  <span className="text-xs font-semibold text-charcoal-500">
-                    3 riders · ₹80 each
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-3xl sm:text-4xl font-black text-charcoal-900 font-mono tracking-tight">
+                      ₹{Math.floor(calcAmount / calcCommuters)}
+                      {calcAmount % calcCommuters > 0 ? `–₹${Math.floor(calcAmount / calcCommuters) + 1}` : '.00'}
+                    </span>
+                    <span className="text-xs font-semibold text-charcoal-500">
+                      / commuter
+                    </span>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-brand-700">
+                    {calcCommuters}x equal split
                   </span>
                 </div>
+
+                <p className="text-[11px] text-charcoal-600 pt-1 leading-relaxed">
+                  {calcAmount % calcCommuters === 0
+                    ? `Exact ₹${(calcAmount / calcCommuters).toFixed(2)} per person with ₹0.00 rounding discrepancy.`
+                    : `Even distribution: remainder ₹${calcAmount % calcCommuters} distributed across ${calcAmount % calcCommuters} members.`}
+                </p>
               </div>
 
-              {/* Information Rows */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs py-0.5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center shrink-0">
-                      <TransportIcon category="metro" size="sm" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-charcoal-900">Yellow Line Metro</p>
-                      <p className="text-[11px] text-charcoal-500">Split equally in integer paise</p>
-                    </div>
-                  </div>
-                  <span className="font-bold text-charcoal-900">₹120</span>
-                </div>
-
-                <div className="flex items-center justify-between text-xs py-0.5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center shrink-0">
-                      <ShieldCheck className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-charcoal-900">Zero Circular Debt</p>
-                      <p className="text-[11px] text-charcoal-500">1 direct UPI transfer clears all</p>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                    Cleared
-                  </span>
-                </div>
-              </div>
-
-              {/* Card Footer */}
-              <div className="pt-4 border-t border-warm-200 flex items-center justify-between text-xs">
-                <span className="text-[11px] text-charcoal-400 font-medium">
-                  Integer paise precision
-                </span>
+              {/* Interactive Simulation Action */}
+              <div className="space-y-2 pt-1">
                 <button
-                  onClick={onGetStarted}
-                  className="font-bold text-xs text-brand-700 hover:text-brand-800 flex items-center gap-1 transition-colors"
+                  type="button"
+                  onClick={() => {
+                    setCalcSettled(true);
+                    setTimeout(() => setCalcSettled(false), 2400);
+                  }}
+                  className={`w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-subtle cursor-pointer ${
+                    calcSettled
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'bg-brand-700 hover:bg-brand-800 text-white'
+                  }`}
                 >
-                  <span>Open App</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  {calcSettled ? (
+                    <>
+                      <Check className="w-4 h-4 text-white" />
+                      <span>All {calcCommuters - 1} Debts Settled in 1 Direct Transfer!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4 text-white" />
+                      <span>Simulate 1-Tap UPI Settlement</span>
+                    </>
+                  )}
                 </button>
+
+                <div className="flex items-center justify-between text-[11px] text-charcoal-400 px-1">
+                  <span>Zero circular debts</span>
+                  <button
+                    onClick={onGetStarted}
+                    className="font-bold text-brand-700 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Start Real Pool</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
