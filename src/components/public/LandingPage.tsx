@@ -443,10 +443,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <span className="font-black text-xs text-charcoal-900 tracking-tight">Expenso</span>
                     <span className="text-[10px] bg-brand-100 text-brand-800 font-bold px-1.5 py-0.2 rounded">v1.0</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-[10px] text-charcoal-500 font-medium">Realtime Sync</span>
-                  </div>
                 </div>
 
                 {/* Blend Header */}
@@ -533,9 +529,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section id="downloads" className="py-16 sm:py-24 bg-white border-y border-warm-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
-            <span className="text-xs uppercase font-extrabold tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full border border-brand-200">
-              Cross-Platform Ready
-            </span>
             <h2 className="text-2xl sm:text-4xl font-black text-charcoal-900 tracking-tight">
               Download Expenso for your devices
             </h2>
@@ -552,9 +545,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs">
                     <Smartphone className="w-6 h-6" />
                   </div>
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
-                    Standalone APK
-                  </span>
                 </div>
 
                 <div>
@@ -604,9 +594,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="w-12 h-12 rounded-2xl bg-brand-100 text-brand-800 flex items-center justify-center shadow-xs">
                     <Monitor className="w-6 h-6" />
                   </div>
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-brand-100 text-brand-900 border border-brand-300">
-                    Windows 10 / 11 Native
-                  </span>
                 </div>
 
                 <div>
@@ -667,9 +654,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-800 flex items-center justify-center shadow-xs">
                     <Globe className="w-6 h-6" />
                   </div>
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300">
-                    Zero Install
-                  </span>
                 </div>
 
                 <div>
@@ -721,9 +705,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* Visual Picture Showcase Gallery */}
       <section id="showcase" className="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6">
         <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
-          <span className="text-xs uppercase font-extrabold tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full border border-brand-200">
-            Interactive Product Showcase
-          </span>
           <h2 className="text-2xl sm:text-4xl font-black text-charcoal-900 tracking-tight">
             See Expenso in action
           </h2>
@@ -820,9 +801,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section id="features" className="py-16 sm:py-24 bg-warm-100/60 border-y border-warm-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
-            <span className="text-xs uppercase font-extrabold tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full border border-brand-200">
-              Engineered For Campus Commutes
-            </span>
             <h2 className="text-2xl sm:text-4xl font-black text-charcoal-900 tracking-tight">
               Powerful features you won&apos;t find in generic splitters
             </h2>
@@ -905,9 +883,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section id="scenarios" className="py-16 sm:py-24 bg-white border-b border-warm-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-2xl mx-auto mb-10 space-y-3">
-            <span className="text-xs uppercase font-extrabold tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full border border-brand-200">
-              Interactive Commute Simulator
-            </span>
             <h2 className="text-2xl sm:text-4xl font-black text-charcoal-900 tracking-tight">
               See how Expenso solves real campus rides
             </h2>
@@ -1085,9 +1060,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* Comparison Matrix: Expenso vs Splitwise vs WhatsApp/Excel */}
       <section id="comparison" className="py-16 sm:py-24 max-w-5xl mx-auto px-4 sm:px-6">
         <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
-          <span className="text-xs uppercase font-extrabold tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full border border-brand-200">
-            Side-By-Side Comparison
-          </span>
           <h2 className="text-2xl sm:text-3xl font-black text-charcoal-900 tracking-tight">
             Why college commuters choose Expenso
           </h2>
@@ -1215,9 +1187,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* FAQ Accordion Section */}
       <section id="faq" className="py-16 sm:py-24 max-w-4xl mx-auto px-4 sm:px-6">
         <div className="text-center max-w-2xl mx-auto mb-12 space-y-3">
-          <span className="text-xs uppercase font-extrabold tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full border border-brand-200">
-            Frequently Asked Questions
-          </span>
           <h2 className="text-2xl sm:text-3xl font-black text-charcoal-900 tracking-tight">
             Everything you need to know about Expenso
           </h2>
