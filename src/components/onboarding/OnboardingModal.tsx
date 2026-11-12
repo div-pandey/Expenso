@@ -9,7 +9,6 @@ import {
   User,
   ArrowRight,
   ArrowLeft,
-  Sparkles,
   Mail,
   Copy,
   Check,
@@ -286,7 +285,7 @@ export const OnboardingModal: React.FC = () => {
     <form onSubmit={handleRegisterNext} className="space-y-4 max-w-sm mx-auto w-full">
       <div>
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 border border-brand-200 text-brand-800 text-[11px] font-bold mb-2">
-          <Sparkles className="w-3.5 h-3.5 text-brand-700" />
+          <CheckCircle2 className="w-3.5 h-3.5 text-brand-700" />
           <span>Quick 30-Second Signup</span>
         </div>
         <h3 className="text-xl font-black text-charcoal-900 tracking-tight">
@@ -559,7 +558,7 @@ export const OnboardingModal: React.FC = () => {
             onClick={handleUseSeedUpi}
             className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-brand-300 bg-brand-50 text-brand-800 text-xs font-bold hover:bg-brand-100 transition-colors cursor-pointer"
           >
-            <Sparkles className="w-3.5 h-3.5 text-brand-700" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-brand-700" />
             <span>Use Verified Test Student QR ({currentUser.fullName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'student'}@oksbi)</span>
           </button>
 

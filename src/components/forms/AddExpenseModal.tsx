@@ -6,7 +6,7 @@ import { calculateEqualShares } from '../../utils/calculations';
 import { formatCurrency, parseRupeesToPaise } from '../../utils/currency';
 import { getCurrentDateTimeLocal } from '../../utils/dates';
 import { TransportIcon } from '../common/TransportIcon';
-import { X, Check, Users, Sparkles, ShieldCheck } from 'lucide-react';
+import { X, Check, Users, ShieldCheck } from 'lucide-react';
 
 export const AddExpenseModal: React.FC = () => {
   const {
@@ -268,8 +268,8 @@ export const AddExpenseModal: React.FC = () => {
 
             {/* Quick description suggestions */}
             <div className="flex flex-wrap items-center gap-1.5 mt-2">
-              <span className="text-[11px] text-charcoal-500 font-medium flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-brand-600" /> Suggestions:
+              <span className="text-[11px] text-charcoal-500 font-medium">
+                Suggestions:
               </span>
               {activeTransportConfig.quickDescriptions.map(suggestion => (
                 <button

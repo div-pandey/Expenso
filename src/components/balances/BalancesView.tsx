@@ -4,8 +4,8 @@ import { formatCurrency } from '../../utils/currency';
 import { formatDateTime } from '../../utils/dates';
 import {
   ArrowRight,
+  ArrowRightLeft,
   CheckCircle2,
-  Sparkles,
   ShieldCheck,
   History,
   Trash2,
@@ -81,7 +81,7 @@ export const BalancesView: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-brand-50 text-brand-700 flex items-center justify-center">
-              <Sparkles className="w-4 h-4" />
+              <ArrowRightLeft className="w-4 h-4" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-charcoal-900">

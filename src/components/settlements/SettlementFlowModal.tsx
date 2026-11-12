@@ -13,7 +13,6 @@ import {
   Smartphone,
   ExternalLink,
   ShieldCheck,
-  Sparkles,
   XCircle,
 } from 'lucide-react';
 import { buildSafeUpiUri, isValidUpiId } from '../../utils/upi';
@@ -651,7 +650,7 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
                 {/* AI Verification Status Card */}
                 {isVerifying && (
                   <div className="p-3.5 bg-purple-50 border border-purple-200 rounded-2xl flex items-center gap-3 text-xs text-purple-900 animate-pulse">
-                    <Sparkles className="w-5 h-5 text-purple-600 animate-spin shrink-0" />
+                    <Loader2 className="w-5 h-5 text-purple-600 animate-spin shrink-0" />
                     <div>
                       <p className="font-bold text-sm">Gemini AI Inspecting Payment Proof...</p>
                       <p className="text-[11px] text-purple-700">Checking receipt authenticity, payment status, ₹{formatCurrency(amountPaise)} amount, and UPI UTR.</p>
@@ -856,7 +855,7 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
                 onClick={() => setShowApiKeyInput(!showApiKeyInput)}
                 className="text-[10px] text-charcoal-400 hover:text-charcoal-600 flex items-center gap-1"
               >
-                <Sparkles className="w-3 h-3 text-purple-500" />
+                <ShieldCheck className="w-3 h-3 text-purple-500" />
                 <span>{hasApiKey ? 'Gemini AI Vision Active ✓' : 'Use your free Gemini API Key (optional)'}</span>
               </button>
               {showApiKeyInput && (

@@ -15,7 +15,6 @@ import {
   ArrowRight,
   ShieldCheck,
   CheckCircle2,
-  Sparkles,
   Smartphone,
   ExternalLink,
   QrCode,
@@ -330,7 +329,7 @@ export const RecordSettlementModal: React.FC = () => {
             {currentUserBalance.netBalancePaise > 0 ? (
               <div className="p-4 rounded-xl bg-emerald-50/80 border border-emerald-200 text-xs text-emerald-800 text-left space-y-1.5 shadow-subtle">
                 <div className="flex items-center gap-1.5 font-bold text-emerald-900">
-                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   <span>You are a lender (+{formatCurrency(currentUserBalance.netBalancePaise)})</span>
                 </div>
                 <p className="text-emerald-700 leading-relaxed text-[11px]">
@@ -626,7 +625,7 @@ export const RecordSettlementModal: React.FC = () => {
                 Payment Screenshot (Optional)
               </label>
               <span className="text-[10px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200 font-bold flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-purple-600" />
+                <ShieldCheck className="w-3 h-3 text-purple-600" />
                 AI Fraud Check
               </span>
             </div>
@@ -648,7 +647,7 @@ export const RecordSettlementModal: React.FC = () => {
                 {/* AI Verification Status Card */}
                 {isVerifying && (
                   <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center gap-2.5 text-xs text-purple-900 animate-pulse">
-                    <Sparkles className="w-4 h-4 text-purple-600 animate-spin shrink-0" />
+                    <Loader2 className="w-4 h-4 text-purple-600 animate-spin shrink-0" />
                     <div>
                       <p className="font-bold">Gemini AI Verifying Screenshot...</p>
                       <p className="text-[10px] text-purple-700">
@@ -844,7 +843,7 @@ export const RecordSettlementModal: React.FC = () => {
                 onClick={() => setShowApiKeyInput(!showApiKeyInput)}
                 className="text-[10px] text-charcoal-400 hover:text-charcoal-600 flex items-center gap-1"
               >
-                <Sparkles className="w-3 h-3 text-purple-500" />
+                <ShieldCheck className="w-3 h-3 text-purple-500" />
                 <span>{hasApiKey ? 'Gemini AI Vision Active ✓' : 'Use your free Gemini API Key (optional)'}</span>
               </button>
               {showApiKeyInput && (

@@ -9,7 +9,7 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   CheckCircle,
-  Sparkles,
+  ArrowRightLeft,
   Receipt,
   Users,
   Copy,
@@ -411,7 +411,7 @@ export const HomeDashboard: React.FC = () => {
         {suggestedSettlements.length > 0 && (
           <div className="mt-4 pt-4 border-t border-warm-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-brand-50/70 p-4 sm:p-5 rounded-2xl border border-brand-200/80">
             <div className="flex items-center gap-2.5 text-xs sm:text-sm text-brand-900">
-              <Sparkles className="w-5 h-5 text-brand-700 shrink-0" />
+              <ArrowRightLeft className="w-5 h-5 text-brand-700 shrink-0" />
               <span>
                 <strong>{suggestedSettlements.length} settlement{suggestedSettlements.length === 1 ? '' : 's'} needed</strong> to clear all debts.
               </span>
