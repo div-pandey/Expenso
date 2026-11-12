@@ -472,7 +472,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 <div className="flex items-center justify-between text-xs py-0.5">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center shrink-0">
                       <ShieldCheck className="w-4 h-4" />
                     </div>
                     <div>
@@ -518,10 +518,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
             {/* 1. Android Mobile App */}
-            <div className="p-6 rounded-3xl bg-warm-50 border-2 border-warm-200 shadow-card flex flex-col justify-between hover:border-emerald-400 transition-all duration-200">
+            <div className="p-6 rounded-3xl bg-warm-50 border-2 border-warm-200 shadow-card flex flex-col justify-between hover:border-brand-400 transition-all duration-200">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs">
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-warm-300 text-brand-800 flex items-center justify-center shadow-subtle">
                     <Smartphone className="w-6 h-6" />
                   </div>
                 </div>
@@ -533,19 +533,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 <ul className="space-y-2 text-xs text-charcoal-600">
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <Check className="w-4 h-4 text-brand-700 shrink-0" />
                     <span>Native Capacitor container & fast launch</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <Check className="w-4 h-4 text-brand-700 shrink-0" />
                     <span>Direct UPI app handoff (GPay, PhonePe, Paytm)</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <Check className="w-4 h-4 text-brand-700 shrink-0" />
                     <span>In-app notifications for split shares</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <Check className="w-4 h-4 text-brand-700 shrink-0" />
                     <span>Touch-optimized for fast metro ride logging</span>
                   </li>
                 </ul>
@@ -555,7 +555,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <a
                   href="/downloads/expenso.apk"
                   download="expenso.apk"
-                  className="btn-action-primary group w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-bold shadow-subtle flex items-center justify-center gap-2 transition-all"
+                  className="btn-action-primary group w-full py-3.5 px-4 bg-brand-700 hover:bg-brand-800 text-white rounded-xl text-xs sm:text-sm font-bold shadow-subtle flex items-center justify-center gap-2 transition-all"
                 >
                   <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
                   <span>Download APK (5.3 MB)</span>
@@ -570,7 +570,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="p-6 rounded-3xl bg-warm-50 border-2 border-brand-300 shadow-card flex flex-col justify-between ring-2 ring-brand-500/10 hover:border-brand-500 transition-all duration-200">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-brand-100 text-brand-800 flex items-center justify-center shadow-xs">
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-warm-300 text-brand-800 flex items-center justify-center shadow-subtle">
                     <Monitor className="w-6 h-6" />
                   </div>
                 </div>
@@ -582,23 +582,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 <ul className="space-y-2 text-xs text-charcoal-600">
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-brand-600 shrink-0" />
+                    <Check className="w-4 h-4 text-brand-700 shrink-0" />
                     <span>Native C# + Microsoft WebView2 executable</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-brand-600 shrink-0" />
+                    <Check className="w-4 h-4 text-brand-700 shrink-0" />
                     <span>System tray icon with quick ride actions</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-brand-600 shrink-0" />
+                    <Check className="w-4 h-4 text-brand-700 shrink-0" />
                     <span>Clipboard paste (Ctrl+V) for screenshot proofs</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-brand-600 shrink-0" />
+                    <Check className="w-4 h-4 text-brand-700 shrink-0" />
                     <span>Keyboard shortcuts: Ctrl+N, Ctrl+S, Ctrl+B, F1</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-brand-600 shrink-0" />
+                    <Check className="w-4 h-4 text-brand-700 shrink-0" />
                     <span>1-click CSV Export for student budgeting</span>
                   </li>
                 </ul>
@@ -627,10 +627,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* 3. Instant Web App */}
-            <div className="p-6 rounded-3xl bg-warm-50 border-2 border-warm-200 shadow-card flex flex-col justify-between hover:border-purple-400 transition-all duration-200">
+            <div className="p-6 rounded-3xl bg-warm-50 border-2 border-warm-200 shadow-card flex flex-col justify-between hover:border-brand-400 transition-all duration-200">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-800 flex items-center justify-center shadow-xs">
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-warm-300 text-brand-800 flex items-center justify-center shadow-subtle">
                     <Globe className="w-6 h-6" />
                   </div>
                 </div>
@@ -642,11 +642,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 <ul className="space-y-2 text-xs text-charcoal-600">
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-purple-600 shrink-0" />
+                    <Check className="w-4 h-4 text-brand-700 shrink-0" />
                     <span>Instant access from any device or tablet</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-purple-600 shrink-0" />
+                    <Check className="w-4 h-4 text-brand-700 shrink-0" />
                     <span>Offline Sandbox mode with demo profiles</span>
                   </li>
                   <li className="flex items-center gap-2">
@@ -790,67 +790,109 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Feature 1: Gemini AI Payment Verification */}
-            <div className="p-6 rounded-2xl bg-white border border-warm-200 shadow-card space-y-3 hover:border-brand-400 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
-                <ShieldCheck className="w-5 h-5" />
+            <div className="p-7 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-4 group">
+              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">01</span>
+                  <span className="text-warm-300">/</span>
+                  <span className="text-[11px] font-bold text-charcoal-400 uppercase tracking-wider">Verification</span>
+                </div>
+                <ShieldCheck className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
               </div>
-              <h3 className="font-bold text-sm text-charcoal-900">Google Gemini AI Verification</h3>
-              <p className="text-xs text-charcoal-600 leading-relaxed">
+              <h3 className="font-extrabold text-base text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                Google Gemini AI Verification
+              </h3>
+              <p className="text-xs sm:text-sm text-charcoal-600 leading-relaxed">
                 Gemini Vision AI inspects uploaded payment screenshots to extract UTR numbers, amounts, and recipient details so no one can fake a payment.
               </p>
             </div>
 
             {/* Feature 2: Zero Circular Debts */}
-            <div className="p-6 rounded-2xl bg-white border border-warm-200 shadow-card space-y-3 hover:border-brand-400 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                <Zap className="w-5 h-5" />
+            <div className="p-7 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-4 group">
+              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">02</span>
+                  <span className="text-warm-300">/</span>
+                  <span className="text-[11px] font-bold text-charcoal-400 uppercase tracking-wider">Algorithm</span>
+                </div>
+                <Zap className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
               </div>
-              <h3 className="font-bold text-sm text-charcoal-900">Zero Circular Debts</h3>
-              <p className="text-xs text-charcoal-600 leading-relaxed">
+              <h3 className="font-extrabold text-base text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                Zero Circular Debts
+              </h3>
+              <p className="text-xs sm:text-sm text-charcoal-600 leading-relaxed">
                 Our greedy net balance resolution engine cancels out circular transfers. In a group of 5, 10 chaotic rides collapse into just 2 simple payments.
               </p>
             </div>
 
             {/* Feature 3: Strict Creator Ownership */}
-            <div className="p-6 rounded-2xl bg-white border border-warm-200 shadow-card space-y-3 hover:border-brand-400 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
-                <ShieldCheck className="w-5 h-5" />
+            <div className="p-7 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-4 group">
+              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">03</span>
+                  <span className="text-warm-300">/</span>
+                  <span className="text-[11px] font-bold text-charcoal-400 uppercase tracking-wider">Integrity</span>
+                </div>
+                <Lock className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
               </div>
-              <h3 className="font-bold text-sm text-charcoal-900">Strict Payer Immuntability</h3>
-              <p className="text-xs text-charcoal-600 leading-relaxed">
+              <h3 className="font-extrabold text-base text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                Strict Payer Immutability
+              </h3>
+              <p className="text-xs sm:text-sm text-charcoal-600 leading-relaxed">
                 You can only log rides you personally paid for. No one can forge bills in your name, enforced by schema-level PostgreSQL check constraints.
               </p>
             </div>
 
             {/* Feature 4: 1-Tap CSV Budget Export */}
-            <div className="p-6 rounded-2xl bg-white border border-warm-200 shadow-card space-y-3 hover:border-brand-400 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
-                <FileSpreadsheet className="w-5 h-5" />
+            <div className="p-7 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-4 group">
+              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">04</span>
+                  <span className="text-warm-300">/</span>
+                  <span className="text-[11px] font-bold text-charcoal-400 uppercase tracking-wider">Export</span>
+                </div>
+                <FileSpreadsheet className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
               </div>
-              <h3 className="font-bold text-sm text-charcoal-900">One-Tap CSV Export</h3>
-              <p className="text-xs text-charcoal-600 leading-relaxed">
+              <h3 className="font-extrabold text-base text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                One-Tap CSV Export
+              </h3>
+              <p className="text-xs sm:text-sm text-charcoal-600 leading-relaxed">
                 Export all filtered transit rides and repayments into standard CSV files for monthly hostel budget records or personal tracking in Excel.
               </p>
             </div>
 
             {/* Feature 5: Native Desktop Convenience */}
-            <div className="p-6 rounded-2xl bg-white border border-warm-200 shadow-card space-y-3 hover:border-brand-400 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
-                <Keyboard className="w-5 h-5" />
+            <div className="p-7 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-4 group">
+              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">05</span>
+                  <span className="text-warm-300">/</span>
+                  <span className="text-[11px] font-bold text-charcoal-400 uppercase tracking-wider">Desktop</span>
+                </div>
+                <Keyboard className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
               </div>
-              <h3 className="font-bold text-sm text-charcoal-900">Ctrl+V Paste & Shortcuts</h3>
-              <p className="text-xs text-charcoal-600 leading-relaxed">
+              <h3 className="font-extrabold text-base text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                Ctrl+V Paste & Shortcuts
+              </h3>
+              <p className="text-xs sm:text-sm text-charcoal-600 leading-relaxed">
                 Desktop users can press Ctrl+V to paste payment screenshots directly from Snipping Tool or WhatsApp, plus Ctrl+N for new rides and F1 for cheat sheet.
               </p>
             </div>
 
             {/* Feature 6: Dynamic Commute Periods */}
-            <div className="p-6 rounded-2xl bg-white border border-warm-200 shadow-card space-y-3 hover:border-brand-400 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
-                <Receipt className="w-5 h-5" />
+            <div className="p-7 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-4 group">
+              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">06</span>
+                  <span className="text-warm-300">/</span>
+                  <span className="text-[11px] font-bold text-charcoal-400 uppercase tracking-wider">Analytics</span>
+                </div>
+                <Receipt className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
               </div>
-              <h3 className="font-bold text-sm text-charcoal-900">Dynamic Commute Periods</h3>
-              <p className="text-xs text-charcoal-600 leading-relaxed">
+              <h3 className="font-extrabold text-base text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                Dynamic Commute Periods
+              </h3>
+              <p className="text-xs sm:text-sm text-charcoal-600 leading-relaxed">
                 Default view displays Today&apos;s journey spend, with 1-tap switches to This Week, This Month, or All Time to keep student spending under control.
               </p>
             </div>
