@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BrandWordmark } from '../common/BrandWordmark';
+import { BrandWordmark, ExpensoLogo } from '../common/BrandWordmark';
 import { TransportIcon } from '../common/TransportIcon';
 import type { TransportCategory } from '../../types';
 import { useApp } from '../../context/AppContext';
@@ -1188,48 +1188,41 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </p>
         </div>
 
-        <div className="bg-white rounded-3xl border border-warm-200/90 shadow-card overflow-hidden">
+        <div className="bg-white rounded-3xl border-2 border-warm-300 shadow-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left border-collapse">
               <thead>
-                <tr className="border-b border-warm-200">
-                  <th className="w-[24%] py-6 px-6 sm:px-8 text-xs font-bold uppercase tracking-wider text-charcoal-500 bg-warm-50/70">
+                <tr className="border-b-2 border-warm-300">
+                  <th className="w-[24%] py-6 px-6 sm:px-8 text-xs font-bold uppercase tracking-wider text-charcoal-500 bg-warm-100/70 border-r border-warm-300">
                     Feature Summary
                   </th>
-                  <th className="w-[36%] py-6 px-6 sm:px-8 bg-brand-50/60 border-x-2 border-brand-500/30">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-brand-800 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                          <span className="font-mono">₹</span>
-                        </div>
-                        <span className="text-base font-black text-brand-900 tracking-tight">Expenso</span>
-                      </div>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-brand-700 text-white shadow-xs">
-                        Student Recommended
-                      </span>
+                  <th className="w-[36%] py-6 px-6 sm:px-8 bg-brand-50/80 border-r-2 border-l-2 border-brand-300">
+                    <div className="flex items-center gap-2.5">
+                      <ExpensoLogo size="xs" />
+                      <span className="text-base font-black text-brand-900 tracking-tight">Expenso</span>
                     </div>
                   </th>
-                  <th className="w-[20%] py-6 px-6 sm:px-8 text-charcoal-800 bg-warm-50/70">
+                  <th className="w-[20%] py-6 px-6 sm:px-8 text-charcoal-800 bg-warm-100/70 border-r border-warm-300">
                     <p className="text-sm font-bold text-charcoal-800">Splitwise</p>
                   </th>
-                  <th className="w-[20%] py-6 px-6 sm:px-8 text-charcoal-800 bg-warm-50/70">
+                  <th className="w-[20%] py-6 px-6 sm:px-8 text-charcoal-800 bg-warm-100/70">
                     <p className="text-sm font-bold text-charcoal-800">WhatsApp & Notes</p>
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-warm-100 text-sm">
+              <tbody className="divide-y divide-warm-200 text-sm">
                 {/* Row 1: Platforms */}
                 <tr className="hover:bg-warm-50/40 transition-colors">
-                  <td className="py-6 px-6 sm:px-8 font-bold text-charcoal-900">
+                  <td className="py-6 px-6 sm:px-8 font-bold text-charcoal-900 border-r border-warm-200">
                     Platform Availability
                   </td>
-                  <td className="py-6 px-6 sm:px-8 bg-brand-50/30 border-x-2 border-brand-500/30 font-bold text-brand-950">
+                  <td className="py-6 px-6 sm:px-8 bg-brand-50/30 border-r-2 border-l-2 border-brand-300/80 font-bold text-brand-950">
                     <div className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span>Android APK + Windows EXE + Web</span>
                     </div>
                   </td>
-                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
+                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium border-r border-warm-200">
                     Mobile & Web only
                   </td>
                   <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
@@ -1239,16 +1232,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 {/* Row 2: AI Receipt Verification */}
                 <tr className="hover:bg-warm-50/40 transition-colors">
-                  <td className="py-6 px-6 sm:px-8 font-bold text-charcoal-900">
+                  <td className="py-6 px-6 sm:px-8 font-bold text-charcoal-900 border-r border-warm-200">
                     AI Payment Verification
                   </td>
-                  <td className="py-6 px-6 sm:px-8 bg-brand-50/30 border-x-2 border-brand-500/30 font-bold text-brand-950">
+                  <td className="py-6 px-6 sm:px-8 bg-brand-50/30 border-r-2 border-l-2 border-brand-300/80 font-bold text-brand-950">
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="w-4 h-4 text-brand-700 shrink-0" />
                       <span>Gemini Vision AI (Checks UTR & ₹)</span>
                     </div>
                   </td>
-                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
+                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium border-r border-warm-200">
                     Manual entry only
                   </td>
                   <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
@@ -1258,16 +1251,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 {/* Row 3: Circular Debt Minimization */}
                 <tr className="hover:bg-warm-50/40 transition-colors">
-                  <td className="py-6 px-6 sm:px-8 font-bold text-charcoal-900">
+                  <td className="py-6 px-6 sm:px-8 font-bold text-charcoal-900 border-r border-warm-200">
                     Debt Simplification
                   </td>
-                  <td className="py-6 px-6 sm:px-8 bg-brand-50/30 border-x-2 border-brand-500/30 font-bold text-brand-950">
+                  <td className="py-6 px-6 sm:px-8 bg-brand-50/30 border-r-2 border-l-2 border-brand-300/80 font-bold text-brand-950">
                     <div className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span>Greedy Graph (1 Direct Transfer)</span>
                     </div>
                   </td>
-                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
+                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium border-r border-warm-200">
                     Splitwise Pro Paywall ($4.99/mo)
                   </td>
                   <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
@@ -1277,16 +1270,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 {/* Row 4: Pricing & Privacy */}
                 <tr className="hover:bg-warm-50/40 transition-colors">
-                  <td className="py-6 px-6 sm:px-8 font-bold text-charcoal-900">
+                  <td className="py-6 px-6 sm:px-8 font-bold text-charcoal-900 border-r border-warm-200">
                     Cost & Ads
                   </td>
-                  <td className="py-6 px-6 sm:px-8 bg-brand-50/30 border-x-2 border-brand-500/30 font-bold text-brand-950">
+                  <td className="py-6 px-6 sm:px-8 bg-brand-50/30 border-r-2 border-l-2 border-brand-300/80 font-bold text-brand-950">
                     <div className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span>100% Free · Zero Ads Forever</span>
                     </div>
                   </td>
-                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
+                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium border-r border-warm-200">
                     Banner ads & video popups
                   </td>
                   <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
@@ -1298,7 +1291,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Table Summary Footer Bar */}
-          <div className="p-6 bg-warm-50/90 border-t border-warm-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="p-6 bg-warm-50/90 border-t-2 border-warm-300 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2.5 text-sm font-bold text-charcoal-900">
               <Check className="w-4 h-4 text-emerald-700 shrink-0" />
               <span>All 4 commute capabilities are 100% free with zero ads in Expenso</span>
