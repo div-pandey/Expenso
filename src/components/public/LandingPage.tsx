@@ -349,11 +349,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           {/* Hero Copy */}
           <div className="lg:col-span-7 space-y-5 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Latest Release: Native Android APK & Windows Desktop</span>
-            </div>
-
             <h1 className="text-3xl sm:text-5xl lg:text-[3.25rem] font-black text-charcoal-900 tracking-tight leading-[1.12]">
               Your rides. Your crew. <br className="hidden sm:inline" />
               <span className="text-brand-700">Zero money confusion.</span>
