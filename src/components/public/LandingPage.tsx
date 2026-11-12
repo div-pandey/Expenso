@@ -896,7 +896,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* Interactive Commute Scenarios Section */}
       <section id="scenarios" className="py-16 sm:py-24 bg-white border-b border-warm-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-10 space-y-3">
             <h2 className="text-2xl sm:text-4xl font-black text-charcoal-900 tracking-tight">
               See how Expenso solves real campus rides
@@ -1031,9 +1031,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* Supported Transport Modes Grid */}
       <section className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase bg-brand-50 border border-brand-200/80 text-brand-800">
-            <span>Campus Transit Modes</span>
-          </div>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-charcoal-900 tracking-tight">
             Covers every leg of your daily commute
           </h2>
@@ -1042,21 +1039,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 sm:gap-6 lg:gap-6 xl:gap-7">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-7 lg:gap-9">
           {/* Card 1: Auto & E-Rickshaws */}
-          <div className="p-7 sm:p-8 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-5 group flex flex-col justify-between min-h-[250px]">
-            <div className="space-y-3.5">
-              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
-                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-0.5 rounded-lg">
+          <div className="lg:col-span-2 p-8 sm:p-9 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-6 group flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3.5 border-b border-warm-100">
+                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-1 rounded-lg">
                   01
                 </span>
                 <Zap className="w-5 h-5 text-brand-700/80 group-hover:text-brand-800 group-hover:scale-110 transition-all duration-200" />
               </div>
               <div>
-                <p className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1">
+                <p className="text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">
                   Feeder Transit
                 </p>
-                <h4 className="font-extrabold text-base lg:text-lg text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                <h4 className="font-extrabold text-lg sm:text-xl text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
                   Auto & E-Rickshaws
                 </h4>
               </div>
@@ -1064,26 +1061,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 The quick ₹10–₹30 shared feeder rides between campus gates and metro stations people always forget to record.
               </p>
             </div>
-            <div className="pt-3 border-t border-warm-100 flex items-center justify-between text-[11px]">
+            <div className="pt-3.5 border-t border-warm-100 flex items-center justify-between text-xs">
               <span className="text-charcoal-400 font-medium">Typical Fare</span>
               <span className="font-bold text-charcoal-800">₹10 – ₹30 / rider</span>
             </div>
           </div>
 
           {/* Card 2: Metro & Rail */}
-          <div className="p-7 sm:p-8 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-5 group flex flex-col justify-between min-h-[250px]">
-            <div className="space-y-3.5">
-              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
-                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-0.5 rounded-lg">
+          <div className="lg:col-span-2 p-8 sm:p-9 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-6 group flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3.5 border-b border-warm-100">
+                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-1 rounded-lg">
                   02
                 </span>
                 <Train className="w-5 h-5 text-brand-700/80 group-hover:text-brand-800 group-hover:scale-110 transition-all duration-200" />
               </div>
               <div>
-                <p className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1">
+                <p className="text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">
                   Transit Backbone
                 </p>
-                <h4 className="font-extrabold text-base lg:text-lg text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                <h4 className="font-extrabold text-lg sm:text-xl text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
                   Metro & Rail
                 </h4>
               </div>
@@ -1091,26 +1088,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Smart card top-ups, tokens, group QR multi-tickets & line transfers split evenly among riders.
               </p>
             </div>
-            <div className="pt-3 border-t border-warm-100 flex items-center justify-between text-[11px]">
+            <div className="pt-3.5 border-t border-warm-100 flex items-center justify-between text-xs">
               <span className="text-charcoal-400 font-medium">Payment Mode</span>
               <span className="font-bold text-charcoal-800">Card / QR Tokens</span>
             </div>
           </div>
 
           {/* Card 3: Cabs & Rideshares */}
-          <div className="p-7 sm:p-8 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-5 group flex flex-col justify-between min-h-[250px]">
-            <div className="space-y-3.5">
-              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
-                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-0.5 rounded-lg">
+          <div className="lg:col-span-2 p-8 sm:p-9 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-6 group flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3.5 border-b border-warm-100">
+                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-1 rounded-lg">
                   03
                 </span>
                 <Navigation className="w-5 h-5 text-brand-700/80 group-hover:text-brand-800 group-hover:scale-110 transition-all duration-200" />
               </div>
               <div>
-                <p className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1">
+                <p className="text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">
                   Late-Night & Surge
                 </p>
-                <h4 className="font-extrabold text-base lg:text-lg text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                <h4 className="font-extrabold text-lg sm:text-xl text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
                   Cabs & Rideshares
                 </h4>
               </div>
@@ -1118,26 +1115,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Uber, Ola, Rapido & BluSmart late-night pools from hackathons, airport pickups or college fest nights.
               </p>
             </div>
-            <div className="pt-3 border-t border-warm-100 flex items-center justify-between text-[11px]">
+            <div className="pt-3.5 border-t border-warm-100 flex items-center justify-between text-xs">
               <span className="text-charcoal-400 font-medium">Split Style</span>
               <span className="font-bold text-charcoal-800">4-Way Even Split</span>
             </div>
           </div>
 
           {/* Card 4: City Buses */}
-          <div className="p-7 sm:p-8 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-5 group flex flex-col justify-between min-h-[250px]">
-            <div className="space-y-3.5">
-              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
-                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-0.5 rounded-lg">
+          <div className="lg:col-span-3 p-8 sm:p-9 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-6 group flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3.5 border-b border-warm-100">
+                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-1 rounded-lg">
                   04
                 </span>
                 <Bus className="w-5 h-5 text-brand-700/80 group-hover:text-brand-800 group-hover:scale-110 transition-all duration-200" />
               </div>
               <div>
-                <p className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1">
-                  Campus & City
+                <p className="text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">
+                  Campus & City Routes
                 </p>
-                <h4 className="font-extrabold text-base lg:text-lg text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                <h4 className="font-extrabold text-lg sm:text-xl text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
                   City Buses
                 </h4>
               </div>
@@ -1145,26 +1142,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 DTC, BMTC, BEST & campus shuttle route passes with conductor UPI scans logged in a single click.
               </p>
             </div>
-            <div className="pt-3 border-t border-warm-100 flex items-center justify-between text-[11px]">
+            <div className="pt-3.5 border-t border-warm-100 flex items-center justify-between text-xs">
               <span className="text-charcoal-400 font-medium">Pass Type</span>
               <span className="font-bold text-charcoal-800">Daily / Monthly</span>
             </div>
           </div>
 
           {/* Card 5: Chai & Commute Food */}
-          <div className="p-7 sm:p-8 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-5 group flex flex-col justify-between min-h-[250px] col-span-1 sm:col-span-2 lg:col-span-1">
-            <div className="space-y-3.5">
-              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
-                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-0.5 rounded-lg">
+          <div className="lg:col-span-3 p-8 sm:p-9 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-6 group flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3.5 border-b border-warm-100">
+                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-1 rounded-lg">
                   05
                 </span>
                 <Coffee className="w-5 h-5 text-brand-700/80 group-hover:text-brand-800 group-hover:scale-110 transition-all duration-200" />
               </div>
               <div>
-                <p className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1">
+                <p className="text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">
                   Pre-Lecture Habit
                 </p>
-                <h4 className="font-extrabold text-base lg:text-lg text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                <h4 className="font-extrabold text-lg sm:text-xl text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
                   Chai & Commute Food
                 </h4>
               </div>
@@ -1172,7 +1169,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 The cutting chai, samosa & canteen tab routine before morning 8:30 AM lectures without awkward IOUs.
               </p>
             </div>
-            <div className="pt-3 border-t border-warm-100 flex items-center justify-between text-[11px]">
+            <div className="pt-3.5 border-t border-warm-100 flex items-center justify-between text-xs">
               <span className="text-charcoal-400 font-medium">Split Method</span>
               <span className="font-bold text-charcoal-800">Tapri UPI Scan</span>
             </div>
@@ -1183,27 +1180,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* Comparison Matrix: Expenso vs Splitwise vs WhatsApp/Excel */}
       <section id="comparison" className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase bg-warm-100 border border-warm-200 text-charcoal-700">
-            <span>The Commute Advantage</span>
-          </div>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-charcoal-900 tracking-tight">
             Why college commuters choose Expenso
           </h2>
           <p className="text-sm sm:text-base text-charcoal-600 max-w-2xl mx-auto leading-relaxed">
-            See how Expenso eliminates the ads, paywalls, and floating-point errors found in generic expense apps and chaotic group chats.
+            A quick summary of how Expenso stacks up against generic expense apps and messy group chats.
           </p>
         </div>
 
         <div className="bg-white rounded-3xl border border-warm-200/90 shadow-card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left border-collapse">
+            <table className="w-full min-w-[720px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-warm-200">
-                  <th className="w-[28%] py-5 px-6 lg:px-8 text-xs font-bold uppercase tracking-wider text-charcoal-500 bg-warm-50/80">
-                    Feature & Commute Workflow
+                  <th className="w-[24%] py-6 px-6 sm:px-8 text-xs font-bold uppercase tracking-wider text-charcoal-500 bg-warm-50/70">
+                    Feature Summary
                   </th>
-                  <th className="w-[32%] py-5 px-6 lg:px-8 bg-brand-50/70 border-x-2 border-brand-500/30">
-                    <div className="flex items-center justify-between gap-2 mb-1">
+                  <th className="w-[36%] py-6 px-6 sm:px-8 bg-brand-50/60 border-x-2 border-brand-500/30">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-lg bg-brand-800 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                           <span className="font-mono">₹</span>
@@ -1214,216 +1208,89 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         Student Recommended
                       </span>
                     </div>
-                    <p className="text-xs font-medium text-brand-800/80">Paise-locked, zero ads, zero fees</p>
                   </th>
-                  <th className="w-[20%] py-5 px-6 lg:px-8 text-charcoal-800 bg-warm-50/80">
+                  <th className="w-[20%] py-6 px-6 sm:px-8 text-charcoal-800 bg-warm-50/70">
                     <p className="text-sm font-bold text-charcoal-800">Splitwise</p>
-                    <p className="text-xs text-charcoal-500 font-normal">Generic global expense app</p>
                   </th>
-                  <th className="w-[20%] py-5 px-6 lg:px-8 text-charcoal-800 bg-warm-50/80">
+                  <th className="w-[20%] py-6 px-6 sm:px-8 text-charcoal-800 bg-warm-50/70">
                     <p className="text-sm font-bold text-charcoal-800">WhatsApp & Notes</p>
-                    <p className="text-xs text-charcoal-500 font-normal">Ad-hoc chat pins & Excel</p>
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-warm-100 text-sm">
-                {/* Row 1: Cross-Platform Access */}
+                {/* Row 1: Platforms */}
                 <tr className="hover:bg-warm-50/40 transition-colors">
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
+                  <td className="py-6 px-6 sm:px-8 font-bold text-charcoal-900">
                     Platform Availability
-                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">Where your group can log & check debts</p>
                   </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
-                    <div className="flex items-center gap-2 font-bold text-brand-950">
+                  <td className="py-6 px-6 sm:px-8 bg-brand-50/30 border-x-2 border-brand-500/30 font-bold text-brand-950">
+                    <div className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span>Android APK + Windows EXE + Web</span>
                     </div>
-                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
-                      Full feature parity on all platforms with zero browser tab dependency on desktop.
-                    </p>
                   </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">Mobile & Web only</span>
-                    <p className="text-xs text-charcoal-500 mt-1">No native desktop application</p>
+                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
+                    Mobile & Web only
                   </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">Chat threads only</span>
-                    <p className="text-xs text-charcoal-500 mt-1">Scattered notes and mobile sheets</p>
+                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
+                    Chat threads & notes only
                   </td>
                 </tr>
 
                 {/* Row 2: AI Receipt Verification */}
                 <tr className="hover:bg-warm-50/40 transition-colors">
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
-                    AI Receipt Verification
-                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">Auditing payment screenshots & proofs</p>
+                  <td className="py-6 px-6 sm:px-8 font-bold text-charcoal-900">
+                    AI Payment Verification
                   </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
-                    <div className="flex items-center gap-2 font-bold text-brand-950">
+                  <td className="py-6 px-6 sm:px-8 bg-brand-50/30 border-x-2 border-brand-500/30 font-bold text-brand-950">
+                    <div className="flex items-center gap-2">
                       <ShieldCheck className="w-4 h-4 text-brand-700 shrink-0" />
-                      <span>Gemini Vision AI Engine</span>
+                      <span>Gemini Vision AI (Checks UTR & ₹)</span>
                     </div>
-                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
-                      Extracts UTR numbers, amounts & timestamps to prevent forged payment screenshots.
-                    </p>
                   </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">Manual entry only</span>
-                    <p className="text-xs text-charcoal-500 mt-1">No UTR or banking verification</p>
+                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
+                    Manual entry only
                   </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">Squinting at chat images</span>
-                    <p className="text-xs text-charcoal-500 mt-1">Easily faked or duplicated proofs</p>
+                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
+                    Squinting at chat screenshots
                   </td>
                 </tr>
 
-                {/* Row 3: Logging Speed */}
+                {/* Row 3: Circular Debt Minimization */}
                 <tr className="hover:bg-warm-50/40 transition-colors">
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
-                    Ride Logging Speed
-                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">Time to record a shared auto or metro fare</p>
+                  <td className="py-6 px-6 sm:px-8 font-bold text-charcoal-900">
+                    Debt Simplification
                   </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
-                    <div className="flex items-center gap-2 font-bold text-brand-950">
-                      <Zap className="w-4 h-4 text-brand-700 shrink-0" />
-                      <span>Under 10 Seconds · 1-Tap Presets</span>
-                    </div>
-                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
-                      Quick chips for Metro, E-Rickshaw, Bus & Cabs with keyboard shortcuts (Ctrl+N).
-                    </p>
-                  </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">45+ seconds with ads</span>
-                    <p className="text-xs text-charcoal-500 mt-1">Full-screen popups and slow forms</p>
-                  </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">Manual typing or forgotten</span>
-                    <p className="text-xs text-charcoal-500 mt-1">High drop-off rate as riders forget</p>
-                  </td>
-                </tr>
-
-                {/* Row 4: Circular Debt Minimization */}
-                <tr className="hover:bg-warm-50/40 transition-colors">
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
-                    Circular Debt Elimination
-                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">Collapsing multi-person loops (A→B→C→A)</p>
-                  </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
-                    <div className="flex items-center gap-2 font-bold text-brand-950">
+                  <td className="py-6 px-6 sm:px-8 bg-brand-50/30 border-x-2 border-brand-500/30 font-bold text-brand-950">
+                    <div className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Greedy Graph Algorithm Included</span>
+                      <span>Greedy Graph (1 Direct Transfer)</span>
                     </div>
-                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
-                      10 chaotic group rides collapse into 1 or 2 direct UPI transfers automatically.
-                    </p>
                   </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">Splitwise Pro Paywall</span>
-                    <p className="text-xs text-charcoal-500 mt-1">Requires paid recurring subscription</p>
+                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
+                    Splitwise Pro Paywall ($4.99/mo)
                   </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">Manual back-and-forth</span>
-                    <p className="text-xs text-charcoal-500 mt-1">Everyone transfers money in circles</p>
+                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
+                    Chaotic circular transfers
                   </td>
                 </tr>
 
-                {/* Row 5: CSV Budget Export */}
+                {/* Row 4: Pricing & Privacy */}
                 <tr className="hover:bg-warm-50/40 transition-colors">
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
-                    CSV Budget Export
-                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">Records for hostel and monthly budgets</p>
+                  <td className="py-6 px-6 sm:px-8 font-bold text-charcoal-900">
+                    Cost & Ads
                   </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
-                    <div className="flex items-center gap-2 font-bold text-brand-950">
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>1-Click Unlimited CSV Export</span>
-                    </div>
-                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
-                      Instant download of filtered commutes, payers, UTRs & repayments for Excel.
-                    </p>
-                  </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">Pro subscription only</span>
-                    <p className="text-xs text-charcoal-500 mt-1">Exporting data is locked behind paywall</p>
-                  </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">Manual copy-paste</span>
-                    <p className="text-xs text-charcoal-500 mt-1">Tedious transcript digging</p>
-                  </td>
-                </tr>
-
-                {/* Row 6: Direct UPI Handoff */}
-                <tr className="hover:bg-warm-50/40 transition-colors">
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
-                    Direct UPI Settlement
-                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">Transferring repayments between bank accounts</p>
-                  </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
-                    <div className="flex items-center gap-2 font-bold text-brand-950">
+                  <td className="py-6 px-6 sm:px-8 bg-brand-50/30 border-x-2 border-brand-500/30 font-bold text-brand-950">
+                    <div className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>1-Tap UPI Deep-Link</span>
+                      <span>100% Free · Zero Ads Forever</span>
                     </div>
-                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
-                      Opens GPay, PhonePe, Paytm or BHIM with recipient VPA & exact paise prefilled.
-                    </p>
                   </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">US-centric payment rails</span>
-                    <p className="text-xs text-charcoal-500 mt-1">Manual copy-pasting of UPI VPA handles</p>
+                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
+                    Banner ads & video popups
                   </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">Manual QR & number sharing</span>
-                    <p className="text-xs text-charcoal-500 mt-1">Pinging "Did you receive it?" in chat</p>
-                  </td>
-                </tr>
-
-                {/* Row 7: Math Precision */}
-                <tr className="hover:bg-warm-50/40 transition-colors">
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
-                    Math Precision
-                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">Handling odd rupee splits among riders</p>
-                  </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
-                    <div className="flex items-center gap-2 font-bold text-brand-950">
-                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Integer Paise (₹0.00 drift)</span>
-                    </div>
-                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
-                      Zero rounding loss guarantee; pool balance always sums to exactly ₹0.00.
-                    </p>
-                  </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">Floating-point rounding</span>
-                    <p className="text-xs text-charcoal-500 mt-1">Balances drift by ₹1 over long cycles</p>
-                  </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">Calculation disputes</span>
-                    <p className="text-xs text-charcoal-500 mt-1">Disagreements over odd rupee fractions</p>
-                  </td>
-                </tr>
-
-                {/* Row 8: Student Privacy & Ads */}
-                <tr className="hover:bg-warm-50/40 transition-colors">
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
-                    Privacy & Ad Model
-                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">User experience and student data treatment</p>
-                  </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
-                    <div className="flex items-center gap-2 font-bold text-brand-950">
-                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>100% Free · Zero Ads · Zero Monetization</span>
-                    </div>
-                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
-                      Built for student commuters with zero data monetization or advertising trackers.
-                    </p>
-                  </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">Ad-supported freemium</span>
-                    <p className="text-xs text-charcoal-500 mt-1">Heavy banners, video countdowns & upsells</p>
-                  </td>
-                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
-                    <span className="font-semibold text-charcoal-800">Ad-free but disorganized</span>
-                    <p className="text-xs text-charcoal-500 mt-1">Financial history mixed with personal chat</p>
+                  <td className="py-6 px-6 sm:px-8 text-charcoal-600 font-medium">
+                    Ad-free, but no expense ledger
                   </td>
                 </tr>
               </tbody>
@@ -1431,19 +1298,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Table Summary Footer Bar */}
-          <div className="p-5 sm:p-6 bg-warm-50/90 border-t border-warm-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-brand-100 text-brand-800 flex items-center justify-center shrink-0 border border-brand-200/80">
-                <Check className="w-5 h-5 text-brand-800" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-charcoal-900">
-                  All 8 commute optimization features are completely free in Expenso
-                </p>
-                <p className="text-xs text-charcoal-500">
-                  No subscriptions, no hidden limits, and no ads. Built for daily student commuters.
-                </p>
-              </div>
+          <div className="p-6 bg-warm-50/90 border-t border-warm-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5 text-sm font-bold text-charcoal-900">
+              <Check className="w-4 h-4 text-emerald-700 shrink-0" />
+              <span>All 4 commute capabilities are 100% free with zero ads in Expenso</span>
             </div>
             <button
               onClick={onGetStarted}
