@@ -16,7 +16,6 @@ import {
   Keyboard,
   Lock,
   Check,
-  X,
   ChevronDown,
   Zap,
   ExternalLink,
@@ -1169,200 +1168,429 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* Supported Transport Modes Grid */}
-      <section className="py-16 sm:py-20 max-w-5xl mx-auto px-4 sm:px-6">
-        <div className="text-center max-w-2xl mx-auto mb-12 space-y-3">
-          <h2 className="text-2xl sm:text-3xl font-black text-charcoal-900 tracking-tight">
+      <section className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase bg-brand-50 border border-brand-200/80 text-brand-800">
+            <span>Campus Transit Modes</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-charcoal-900 tracking-tight">
             Covers every leg of your daily commute
           </h2>
-          <p className="text-xs sm:text-sm text-charcoal-500">
-            From quick cash e-rickshaws to late night surge cabs, tag and categorize your rides in seconds.
+          <p className="text-sm sm:text-base text-charcoal-600 max-w-2xl mx-auto leading-relaxed">
+            From quick cash e-rickshaws to late night surge cabs, tag and categorize your campus transit in seconds.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 sm:gap-6 lg:gap-6 xl:gap-7">
           {/* Card 1: Auto & E-Rickshaws */}
-          <div className="p-6 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-3.5 group flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between pb-2.5 border-b border-warm-100">
-                <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">01</span>
-                <Zap className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
+          <div className="p-7 sm:p-8 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-5 group flex flex-col justify-between min-h-[250px]">
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
+                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-0.5 rounded-lg">
+                  01
+                </span>
+                <Zap className="w-5 h-5 text-brand-700/80 group-hover:text-brand-800 group-hover:scale-110 transition-all duration-200" />
               </div>
-              <h4 className="font-extrabold text-sm text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
-                Auto & E-Rickshaws
-              </h4>
-              <p className="text-xs text-charcoal-500 leading-relaxed">
-                The quick ₹10–₹30 shared rides people always forget
+              <div>
+                <p className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1">
+                  Feeder Transit
+                </p>
+                <h4 className="font-extrabold text-base lg:text-lg text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                  Auto & E-Rickshaws
+                </h4>
+              </div>
+              <p className="text-xs sm:text-sm text-charcoal-600 leading-relaxed">
+                The quick ₹10–₹30 shared feeder rides between campus gates and metro stations people always forget to record.
               </p>
+            </div>
+            <div className="pt-3 border-t border-warm-100 flex items-center justify-between text-[11px]">
+              <span className="text-charcoal-400 font-medium">Typical Fare</span>
+              <span className="font-bold text-charcoal-800">₹10 – ₹30 / rider</span>
             </div>
           </div>
 
           {/* Card 2: Metro & Rail */}
-          <div className="p-6 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-3.5 group flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between pb-2.5 border-b border-warm-100">
-                <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">02</span>
-                <Train className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
+          <div className="p-7 sm:p-8 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-5 group flex flex-col justify-between min-h-[250px]">
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
+                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-0.5 rounded-lg">
+                  02
+                </span>
+                <Train className="w-5 h-5 text-brand-700/80 group-hover:text-brand-800 group-hover:scale-110 transition-all duration-200" />
               </div>
-              <h4 className="font-extrabold text-sm text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
-                Metro & Rail
-              </h4>
-              <p className="text-xs text-charcoal-500 leading-relaxed">
-                Smart card top-ups, tokens & shared multi-tickets
+              <div>
+                <p className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1">
+                  Transit Backbone
+                </p>
+                <h4 className="font-extrabold text-base lg:text-lg text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                  Metro & Rail
+                </h4>
+              </div>
+              <p className="text-xs sm:text-sm text-charcoal-600 leading-relaxed">
+                Smart card top-ups, tokens, group QR multi-tickets & line transfers split evenly among riders.
               </p>
+            </div>
+            <div className="pt-3 border-t border-warm-100 flex items-center justify-between text-[11px]">
+              <span className="text-charcoal-400 font-medium">Payment Mode</span>
+              <span className="font-bold text-charcoal-800">Card / QR Tokens</span>
             </div>
           </div>
 
           {/* Card 3: Cabs & Rideshares */}
-          <div className="p-6 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-3.5 group flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between pb-2.5 border-b border-warm-100">
-                <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">03</span>
-                <Navigation className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
+          <div className="p-7 sm:p-8 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-5 group flex flex-col justify-between min-h-[250px]">
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
+                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-0.5 rounded-lg">
+                  03
+                </span>
+                <Navigation className="w-5 h-5 text-brand-700/80 group-hover:text-brand-800 group-hover:scale-110 transition-all duration-200" />
               </div>
-              <h4 className="font-extrabold text-sm text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
-                Cabs & Rideshares
-              </h4>
-              <p className="text-xs text-charcoal-500 leading-relaxed">
-                Uber, Ola, Rapido & BluSmart late-night pools
+              <div>
+                <p className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1">
+                  Late-Night & Surge
+                </p>
+                <h4 className="font-extrabold text-base lg:text-lg text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                  Cabs & Rideshares
+                </h4>
+              </div>
+              <p className="text-xs sm:text-sm text-charcoal-600 leading-relaxed">
+                Uber, Ola, Rapido & BluSmart late-night pools from hackathons, airport pickups or college fest nights.
               </p>
+            </div>
+            <div className="pt-3 border-t border-warm-100 flex items-center justify-between text-[11px]">
+              <span className="text-charcoal-400 font-medium">Split Style</span>
+              <span className="font-bold text-charcoal-800">4-Way Even Split</span>
             </div>
           </div>
 
           {/* Card 4: City Buses */}
-          <div className="p-6 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-3.5 group flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between pb-2.5 border-b border-warm-100">
-                <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">04</span>
-                <Bus className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
+          <div className="p-7 sm:p-8 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-5 group flex flex-col justify-between min-h-[250px]">
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
+                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-0.5 rounded-lg">
+                  04
+                </span>
+                <Bus className="w-5 h-5 text-brand-700/80 group-hover:text-brand-800 group-hover:scale-110 transition-all duration-200" />
               </div>
-              <h4 className="font-extrabold text-sm text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
-                City Buses
-              </h4>
-              <p className="text-xs text-charcoal-500 leading-relaxed">
-                DTC, BMTC, BEST & campus shuttle route passes
+              <div>
+                <p className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1">
+                  Campus & City
+                </p>
+                <h4 className="font-extrabold text-base lg:text-lg text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                  City Buses
+                </h4>
+              </div>
+              <p className="text-xs sm:text-sm text-charcoal-600 leading-relaxed">
+                DTC, BMTC, BEST & campus shuttle route passes with conductor UPI scans logged in a single click.
               </p>
+            </div>
+            <div className="pt-3 border-t border-warm-100 flex items-center justify-between text-[11px]">
+              <span className="text-charcoal-400 font-medium">Pass Type</span>
+              <span className="font-bold text-charcoal-800">Daily / Monthly</span>
             </div>
           </div>
 
           {/* Card 5: Chai & Commute Food */}
-          <div className="p-6 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-3.5 group flex flex-col justify-between col-span-1 sm:col-span-2 lg:col-span-1">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between pb-2.5 border-b border-warm-100">
-                <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">05</span>
-                <Coffee className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
+          <div className="p-7 sm:p-8 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-500/80 transition-all duration-300 space-y-5 group flex flex-col justify-between min-h-[250px] col-span-1 sm:col-span-2 lg:col-span-1">
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between pb-3 border-b border-warm-100">
+                <span className="text-xs font-mono font-black text-brand-800 bg-brand-50 border border-brand-200/70 px-2.5 py-0.5 rounded-lg">
+                  05
+                </span>
+                <Coffee className="w-5 h-5 text-brand-700/80 group-hover:text-brand-800 group-hover:scale-110 transition-all duration-200" />
               </div>
-              <h4 className="font-extrabold text-sm text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
-                Chai & Commute Food
-              </h4>
-              <p className="text-xs text-charcoal-500 leading-relaxed">
-                The cutting chai & samosa routine before morning lecture
+              <div>
+                <p className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1">
+                  Pre-Lecture Habit
+                </p>
+                <h4 className="font-extrabold text-base lg:text-lg text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                  Chai & Commute Food
+                </h4>
+              </div>
+              <p className="text-xs sm:text-sm text-charcoal-600 leading-relaxed">
+                The cutting chai, samosa & canteen tab routine before morning 8:30 AM lectures without awkward IOUs.
               </p>
+            </div>
+            <div className="pt-3 border-t border-warm-100 flex items-center justify-between text-[11px]">
+              <span className="text-charcoal-400 font-medium">Split Method</span>
+              <span className="font-bold text-charcoal-800">Tapri UPI Scan</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* Comparison Matrix: Expenso vs Splitwise vs WhatsApp/Excel */}
-      <section id="comparison" className="py-16 sm:py-24 max-w-5xl mx-auto px-4 sm:px-6">
-        <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
-          <h2 className="text-2xl sm:text-3xl font-black text-charcoal-900 tracking-tight">
+      <section id="comparison" className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase bg-warm-100 border border-warm-200 text-charcoal-700">
+            <span>The Commute Advantage</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-charcoal-900 tracking-tight">
             Why college commuters choose Expenso
           </h2>
-          <p className="text-xs sm:text-sm text-charcoal-500">
-            See how Expenso stacks up against generic expense apps, WhatsApp notes, and Excel sheets.
+          <p className="text-sm sm:text-base text-charcoal-600 max-w-2xl mx-auto leading-relaxed">
+            See how Expenso eliminates the ads, paywalls, and floating-point errors found in generic expense apps and chaotic group chats.
           </p>
         </div>
 
-        <div className="bg-white rounded-3xl border border-warm-200 shadow-card overflow-hidden">
+        <div className="bg-white rounded-3xl border border-warm-200/90 shadow-card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-left border-collapse text-xs">
+            <table className="w-full min-w-[760px] text-left border-collapse">
               <thead>
-                <tr className="bg-warm-100/70 border-b border-warm-200 text-charcoal-800">
-                  <th className="py-3.5 px-4 font-bold">Feature</th>
-                  <th className="py-3.5 px-4 font-black text-brand-900 bg-brand-50/60 border-x border-brand-200/60">
-                    Expenso
+                <tr className="border-b border-warm-200">
+                  <th className="w-[28%] py-5 px-6 lg:px-8 text-xs font-bold uppercase tracking-wider text-charcoal-500 bg-warm-50/80">
+                    Feature & Commute Workflow
                   </th>
-                  <th className="py-3.5 px-4 font-semibold text-charcoal-600">Splitwise</th>
-                  <th className="py-3.5 px-4 font-semibold text-charcoal-600">WhatsApp / Notes</th>
+                  <th className="w-[32%] py-5 px-6 lg:px-8 bg-brand-50/70 border-x-2 border-brand-500/30">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-brand-800 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                          <span className="font-mono">₹</span>
+                        </div>
+                        <span className="text-base font-black text-brand-900 tracking-tight">Expenso</span>
+                      </div>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-brand-700 text-white shadow-xs">
+                        Student Recommended
+                      </span>
+                    </div>
+                    <p className="text-xs font-medium text-brand-800/80">Paise-locked, zero ads, zero fees</p>
+                  </th>
+                  <th className="w-[20%] py-5 px-6 lg:px-8 text-charcoal-800 bg-warm-50/80">
+                    <p className="text-sm font-bold text-charcoal-800">Splitwise</p>
+                    <p className="text-xs text-charcoal-500 font-normal">Generic global expense app</p>
+                  </th>
+                  <th className="w-[20%] py-5 px-6 lg:px-8 text-charcoal-800 bg-warm-50/80">
+                    <p className="text-sm font-bold text-charcoal-800">WhatsApp & Notes</p>
+                    <p className="text-xs text-charcoal-500 font-normal">Ad-hoc chat pins & Excel</p>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-warm-100">
-                <tr>
-                  <td className="py-3 px-4 font-bold text-charcoal-900">Platform Availability</td>
-                  <td className="py-3 px-4 font-bold text-brand-900 bg-brand-50/30 border-x border-brand-200/40">
-                    <Check className="w-4 h-4 inline mr-1 text-emerald-600" /> Web + Android APK + Windows EXE
+              <tbody className="divide-y divide-warm-100 text-sm">
+                {/* Row 1: Cross-Platform Access */}
+                <tr className="hover:bg-warm-50/40 transition-colors">
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
+                    Platform Availability
+                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">Where your group can log & check debts</p>
                   </td>
-                  <td className="py-3 px-4 text-charcoal-600">Mobile & Web only</td>
-                  <td className="py-3 px-4 text-charcoal-600">Manual text messages</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 font-bold text-charcoal-900">AI Receipt Verification</td>
-                  <td className="py-3 px-4 font-bold text-emerald-700 bg-brand-50/30 border-x border-brand-200/40">
-                    <ShieldCheck className="w-4 h-4 inline mr-1 text-brand-700" /> Gemini AI Vision (checks UTR & ₹)
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
+                    <div className="flex items-center gap-2 font-bold text-brand-950">
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Android APK + Windows EXE + Web</span>
+                    </div>
+                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
+                      Full feature parity on all platforms with zero browser tab dependency on desktop.
+                    </p>
                   </td>
-                  <td className="py-3 px-4 text-rose-600">
-                    <X className="w-4 h-4 inline mr-1" /> None
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">Mobile & Web only</span>
+                    <p className="text-xs text-charcoal-500 mt-1">No native desktop application</p>
                   </td>
-                  <td className="py-3 px-4 text-charcoal-600">Manual squinting at chat</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 font-bold text-charcoal-900">Logging Speed</td>
-                  <td className="py-3 px-4 font-bold text-brand-900 bg-brand-50/30 border-x border-brand-200/40">
-                    <Zap className="w-4 h-4 inline mr-1 text-brand-700" /> Under 10 seconds
-                  </td>
-                  <td className="py-3 px-4 text-charcoal-600">45+ seconds with ads</td>
-                  <td className="py-3 px-4 text-charcoal-600">Manual typing & forget</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 font-bold text-charcoal-900">Circular Debt Elimination</td>
-                  <td className="py-3 px-4 font-bold text-emerald-700 bg-brand-50/30 border-x border-brand-200/40">
-                    <Check className="w-4 h-4 inline mr-1 text-emerald-600" /> Automatic Net Minimizer
-                  </td>
-                  <td className="py-3 px-4 text-charcoal-600">Paywalled or complex</td>
-                  <td className="py-3 px-4 text-rose-600 font-semibold">
-                    <X className="w-4 h-4 inline mr-1" /> Impossible manually
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">Chat threads only</span>
+                    <p className="text-xs text-charcoal-500 mt-1">Scattered notes and mobile sheets</p>
                   </td>
                 </tr>
-                <tr>
-                  <td className="py-3 px-4 font-bold text-charcoal-900">CSV Budget Export</td>
-                  <td className="py-3 px-4 font-bold text-emerald-700 bg-brand-50/30 border-x border-brand-200/40">
-                    <FileSpreadsheet className="w-4 h-4 inline mr-1 text-emerald-600" /> 1-Click CSV Export (Free)
+
+                {/* Row 2: AI Receipt Verification */}
+                <tr className="hover:bg-warm-50/40 transition-colors">
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
+                    AI Receipt Verification
+                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">Auditing payment screenshots & proofs</p>
                   </td>
-                  <td className="py-3 px-4 text-rose-600 font-semibold">
-                    <X className="w-4 h-4 inline mr-1" /> Splitwise Pro Paywall
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
+                    <div className="flex items-center gap-2 font-bold text-brand-950">
+                      <ShieldCheck className="w-4 h-4 text-brand-700 shrink-0" />
+                      <span>Gemini Vision AI Engine</span>
+                    </div>
+                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
+                      Extracts UTR numbers, amounts & timestamps to prevent forged payment screenshots.
+                    </p>
                   </td>
-                  <td className="py-3 px-4 text-charcoal-600">Manual copy-paste</td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">Manual entry only</span>
+                    <p className="text-xs text-charcoal-500 mt-1">No UTR or banking verification</p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">Squinting at chat images</span>
+                    <p className="text-xs text-charcoal-500 mt-1">Easily faked or duplicated proofs</p>
+                  </td>
                 </tr>
-                <tr>
-                  <td className="py-3 px-4 font-bold text-charcoal-900">Direct UPI Handoff</td>
-                  <td className="py-3 px-4 font-bold text-emerald-700 bg-brand-50/30 border-x border-brand-200/40">
-                    <Check className="w-4 h-4 inline mr-1 text-emerald-600" /> GPay / PhonePe / Paytm deep-link
+
+                {/* Row 3: Logging Speed */}
+                <tr className="hover:bg-warm-50/40 transition-colors">
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
+                    Ride Logging Speed
+                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">Time to record a shared auto or metro fare</p>
                   </td>
-                  <td className="py-3 px-4 text-charcoal-600">Third-party paywall/fees</td>
-                  <td className="py-3 px-4 text-rose-600 font-semibold">
-                    <X className="w-4 h-4 inline mr-1" /> Copy-pasting numbers
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
+                    <div className="flex items-center gap-2 font-bold text-brand-950">
+                      <Zap className="w-4 h-4 text-brand-700 shrink-0" />
+                      <span>Under 10 Seconds · 1-Tap Presets</span>
+                    </div>
+                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
+                      Quick chips for Metro, E-Rickshaw, Bus & Cabs with keyboard shortcuts (Ctrl+N).
+                    </p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">45+ seconds with ads</span>
+                    <p className="text-xs text-charcoal-500 mt-1">Full-screen popups and slow forms</p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">Manual typing or forgotten</span>
+                    <p className="text-xs text-charcoal-500 mt-1">High drop-off rate as riders forget</p>
                   </td>
                 </tr>
-                <tr>
-                  <td className="py-3 px-4 font-bold text-charcoal-900">Privacy & Ads</td>
-                  <td className="py-3 px-4 font-bold text-emerald-700 bg-brand-50/30 border-x border-brand-200/40">
-                    100% Free & Zero Ads
+
+                {/* Row 4: Circular Debt Minimization */}
+                <tr className="hover:bg-warm-50/40 transition-colors">
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
+                    Circular Debt Elimination
+                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">Collapsing multi-person loops (A→B→C→A)</p>
                   </td>
-                  <td className="py-3 px-4 text-charcoal-600">Heavy banner ads & countdowns</td>
-                  <td className="py-3 px-4 text-charcoal-600">Ad-free but chaotic</td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
+                    <div className="flex items-center gap-2 font-bold text-brand-950">
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Greedy Graph Algorithm Included</span>
+                    </div>
+                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
+                      10 chaotic group rides collapse into 1 or 2 direct UPI transfers automatically.
+                    </p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">Splitwise Pro Paywall</span>
+                    <p className="text-xs text-charcoal-500 mt-1">Requires paid recurring subscription</p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">Manual back-and-forth</span>
+                    <p className="text-xs text-charcoal-500 mt-1">Everyone transfers money in circles</p>
+                  </td>
                 </tr>
-                <tr>
-                  <td className="py-3 px-4 font-bold text-charcoal-900">Math Precision</td>
-                  <td className="py-3 px-4 font-bold text-emerald-700 bg-brand-50/30 border-x border-brand-200/40">
-                    Exact Integer Paise (₹0.00 error)
+
+                {/* Row 5: CSV Budget Export */}
+                <tr className="hover:bg-warm-50/40 transition-colors">
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
+                    CSV Budget Export
+                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">Records for hostel and monthly budgets</p>
                   </td>
-                  <td className="py-3 px-4 text-charcoal-600">Floating-point rounding</td>
-                  <td className="py-3 px-4 text-rose-600 font-semibold">
-                    <X className="w-4 h-4 inline mr-1" /> High calculation errors
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
+                    <div className="flex items-center gap-2 font-bold text-brand-950">
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>1-Click Unlimited CSV Export</span>
+                    </div>
+                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
+                      Instant download of filtered commutes, payers, UTRs & repayments for Excel.
+                    </p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">Pro subscription only</span>
+                    <p className="text-xs text-charcoal-500 mt-1">Exporting data is locked behind paywall</p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">Manual copy-paste</span>
+                    <p className="text-xs text-charcoal-500 mt-1">Tedious transcript digging</p>
+                  </td>
+                </tr>
+
+                {/* Row 6: Direct UPI Handoff */}
+                <tr className="hover:bg-warm-50/40 transition-colors">
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
+                    Direct UPI Settlement
+                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">Transferring repayments between bank accounts</p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
+                    <div className="flex items-center gap-2 font-bold text-brand-950">
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>1-Tap UPI Deep-Link</span>
+                    </div>
+                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
+                      Opens GPay, PhonePe, Paytm or BHIM with recipient VPA & exact paise prefilled.
+                    </p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">US-centric payment rails</span>
+                    <p className="text-xs text-charcoal-500 mt-1">Manual copy-pasting of UPI VPA handles</p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">Manual QR & number sharing</span>
+                    <p className="text-xs text-charcoal-500 mt-1">Pinging "Did you receive it?" in chat</p>
+                  </td>
+                </tr>
+
+                {/* Row 7: Math Precision */}
+                <tr className="hover:bg-warm-50/40 transition-colors">
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
+                    Math Precision
+                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">Handling odd rupee splits among riders</p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
+                    <div className="flex items-center gap-2 font-bold text-brand-950">
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Integer Paise (₹0.00 drift)</span>
+                    </div>
+                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
+                      Zero rounding loss guarantee; pool balance always sums to exactly ₹0.00.
+                    </p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">Floating-point rounding</span>
+                    <p className="text-xs text-charcoal-500 mt-1">Balances drift by ₹1 over long cycles</p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">Calculation disputes</span>
+                    <p className="text-xs text-charcoal-500 mt-1">Disagreements over odd rupee fractions</p>
+                  </td>
+                </tr>
+
+                {/* Row 8: Student Privacy & Ads */}
+                <tr className="hover:bg-warm-50/40 transition-colors">
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 font-bold text-charcoal-900">
+                    Privacy & Ad Model
+                    <p className="text-xs font-normal text-charcoal-500 mt-0.5">User experience and student data treatment</p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 bg-brand-50/30 border-x-2 border-brand-500/30">
+                    <div className="flex items-center gap-2 font-bold text-brand-950">
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>100% Free · Zero Ads · Zero Monetization</span>
+                    </div>
+                    <p className="text-xs text-charcoal-600 mt-1 leading-snug">
+                      Built for student commuters with zero data monetization or advertising trackers.
+                    </p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">Ad-supported freemium</span>
+                    <p className="text-xs text-charcoal-500 mt-1">Heavy banners, video countdowns & upsells</p>
+                  </td>
+                  <td className="py-4 lg:py-5 px-6 lg:px-8 text-charcoal-700">
+                    <span className="font-semibold text-charcoal-800">Ad-free but disorganized</span>
+                    <p className="text-xs text-charcoal-500 mt-1">Financial history mixed with personal chat</p>
                   </td>
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          {/* Table Summary Footer Bar */}
+          <div className="p-5 sm:p-6 bg-warm-50/90 border-t border-warm-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-brand-100 text-brand-800 flex items-center justify-center shrink-0 border border-brand-200/80">
+                <Check className="w-5 h-5 text-brand-800" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-charcoal-900">
+                  All 8 commute optimization features are completely free in Expenso
+                </p>
+                <p className="text-xs text-charcoal-500">
+                  No subscriptions, no hidden limits, and no ads. Built for daily student commuters.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onGetStarted}
+              className="btn-action-primary group shrink-0 py-2.5 px-5 bg-brand-700 hover:bg-brand-800 text-white rounded-xl text-xs font-bold shadow-subtle flex items-center gap-2"
+            >
+              <span>Launch Expenso</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </button>
           </div>
         </div>
       </section>
