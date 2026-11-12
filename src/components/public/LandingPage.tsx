@@ -23,6 +23,10 @@ import {
   Layers,
   RefreshCw,
   Eye,
+  Train,
+  Bus,
+  Navigation,
+  Coffee,
 } from 'lucide-react';
 
 interface LandingPageProps {
@@ -1045,35 +1049,85 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5">
-          <div className="p-4 rounded-2xl bg-white border border-warm-200 shadow-card text-center space-y-2.5 hover:border-brand-300 transition-colors flex flex-col items-center">
-            <TransportIcon category="erickshaw" size="lg" />
-            <h4 className="font-bold text-xs text-charcoal-900">Auto & E-Rickshaws</h4>
-            <p className="text-[11px] text-charcoal-500">The quick ₹10–₹30 shared rides people always forget</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5">
+          {/* Card 1: Auto & E-Rickshaws */}
+          <div className="p-6 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-3.5 group flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-2.5 border-b border-warm-100">
+                <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">01</span>
+                <Zap className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
+              </div>
+              <h4 className="font-extrabold text-sm text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                Auto & E-Rickshaws
+              </h4>
+              <p className="text-xs text-charcoal-500 leading-relaxed">
+                The quick ₹10–₹30 shared rides people always forget
+              </p>
+            </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-warm-200 shadow-card text-center space-y-2.5 hover:border-brand-300 transition-colors flex flex-col items-center">
-            <TransportIcon category="metro" size="lg" />
-            <h4 className="font-bold text-xs text-charcoal-900">Metro & Rail</h4>
-            <p className="text-[11px] text-charcoal-500">Smart card top-ups, tokens & shared multi-tickets</p>
+          {/* Card 2: Metro & Rail */}
+          <div className="p-6 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-3.5 group flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-2.5 border-b border-warm-100">
+                <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">02</span>
+                <Train className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
+              </div>
+              <h4 className="font-extrabold text-sm text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                Metro & Rail
+              </h4>
+              <p className="text-xs text-charcoal-500 leading-relaxed">
+                Smart card top-ups, tokens & shared multi-tickets
+              </p>
+            </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-warm-200 shadow-card text-center space-y-2.5 hover:border-brand-300 transition-colors flex flex-col items-center">
-            <TransportIcon category="cab" size="lg" />
-            <h4 className="font-bold text-xs text-charcoal-900">Cabs & Rideshares</h4>
-            <p className="text-[11px] text-charcoal-500">Uber, Ola, Rapido & BluSmart late-night pools</p>
+          {/* Card 3: Cabs & Rideshares */}
+          <div className="p-6 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-3.5 group flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-2.5 border-b border-warm-100">
+                <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">03</span>
+                <Navigation className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
+              </div>
+              <h4 className="font-extrabold text-sm text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                Cabs & Rideshares
+              </h4>
+              <p className="text-xs text-charcoal-500 leading-relaxed">
+                Uber, Ola, Rapido & BluSmart late-night pools
+              </p>
+            </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-warm-200 shadow-card text-center space-y-2.5 hover:border-brand-300 transition-colors flex flex-col items-center">
-            <TransportIcon category="bus" size="lg" />
-            <h4 className="font-bold text-xs text-charcoal-900">City Buses</h4>
-            <p className="text-[11px] text-charcoal-500">DTC, BMTC, BEST & campus shuttle route passes</p>
+          {/* Card 4: City Buses */}
+          <div className="p-6 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-3.5 group flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-2.5 border-b border-warm-100">
+                <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">04</span>
+                <Bus className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
+              </div>
+              <h4 className="font-extrabold text-sm text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                City Buses
+              </h4>
+              <p className="text-xs text-charcoal-500 leading-relaxed">
+                DTC, BMTC, BEST & campus shuttle route passes
+              </p>
+            </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-warm-200 shadow-card text-center space-y-2.5 hover:border-brand-300 transition-colors col-span-2 sm:col-span-1 flex flex-col items-center">
-            <TransportIcon category="other" size="lg" />
-            <h4 className="font-bold text-xs text-charcoal-900">Chai & Commute Food</h4>
-            <p className="text-[11px] text-charcoal-500">The cutting chai & samosa routine before morning lecture</p>
+          {/* Card 5: Chai & Commute Food */}
+          <div className="p-6 rounded-3xl bg-white border border-warm-200/90 shadow-card hover:shadow-elevated hover:border-brand-400 transition-all duration-200 space-y-3.5 group flex flex-col justify-between col-span-1 sm:col-span-2 lg:col-span-1">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-2.5 border-b border-warm-100">
+                <span className="text-xs font-mono font-extrabold text-brand-700 tracking-wider">05</span>
+                <Coffee className="w-4 h-4 text-brand-700/80 group-hover:text-brand-700 transition-colors" />
+              </div>
+              <h4 className="font-extrabold text-sm text-charcoal-900 tracking-tight group-hover:text-brand-900 transition-colors">
+                Chai & Commute Food
+              </h4>
+              <p className="text-xs text-charcoal-500 leading-relaxed">
+                The cutting chai & samosa routine before morning lecture
+              </p>
+            </div>
           </div>
         </div>
       </section>
