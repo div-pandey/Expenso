@@ -46,13 +46,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   // Interactive Transit Pipeline State
   const [pipelineRoute, setPipelineRoute] = useState<'metro' | 'cab' | 'bus'>('metro');
-  const [selectedStation, setSelectedStation] = useState<number>(0);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-
-  const handleSimulatePipeline = () => {
-    setIsProcessing(true);
-    setTimeout(() => setIsProcessing(false), 800);
-  };
 
   const pipelineRoutes = {
     metro: {
@@ -62,27 +55,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       legs: [
         {
           id: 0,
-          stop: 'Metro Station',
-          mode: 'Yellow Line',
-          icon: Train,
+          category: 'Metro Rail',
+          mode: 'Yellow Line Metro',
+          stop: 'Vishwavidyalaya',
           paidBy: 'Divyansh',
           amount: 120,
           split: '3 × ₹40',
         },
         {
           id: 1,
+          category: 'Campus Feeder',
+          mode: 'E-Rickshaw Shuttle',
           stop: 'Faculty Gate 3',
-          mode: 'E-Rickshaw',
-          icon: Zap,
           paidBy: 'Rahul',
           amount: 60,
           split: '3 × ₹20',
         },
         {
           id: 2,
-          stop: 'Campus Tapri',
-          mode: 'Cutting Chai',
-          icon: Coffee,
+          category: 'Transit Snack',
+          mode: 'Campus Tapri Chai',
+          stop: 'North Campus',
           paidBy: 'Aman',
           amount: 45,
           split: '3 × ₹15',
@@ -104,27 +97,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       legs: [
         {
           id: 0,
+          category: 'Rideshare',
+          mode: 'Uber XL Ride',
           stop: 'Tech Block',
-          mode: 'Uber XL Cab',
-          icon: Navigation,
           paidBy: 'Divyansh',
           amount: 360,
           split: '3 × ₹120',
         },
         {
           id: 1,
+          category: 'Highway Toll',
+          mode: 'Fastag Toll Booth',
           stop: 'Flyover Toll',
-          mode: 'Fastag Toll',
-          icon: Zap,
           paidBy: 'Rahul',
           amount: 45,
           split: '3 × ₹15',
         },
         {
           id: 2,
+          category: 'Late Snack',
+          mode: 'Hostel Gate Maggi',
           stop: 'Hostel Gate',
-          mode: 'Midnight Maggi',
-          icon: Coffee,
           paidBy: 'Rahul',
           amount: 45,
           split: '3 × ₹15',
@@ -146,27 +139,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       legs: [
         {
           id: 0,
-          stop: 'Bus Terminal',
+          category: 'City Transit',
           mode: 'City Route 505',
-          icon: Bus,
+          stop: 'Bus Terminal',
           paidBy: 'Aman',
           amount: 90,
           split: '3 × ₹30',
         },
         {
           id: 1,
+          category: 'Feeder Shuttle',
+          mode: 'Campus Feeder',
           stop: 'Interchange',
-          mode: 'Feeder Shuttle',
-          icon: Zap,
           paidBy: 'Rahul',
           amount: 45,
           split: '3 × ₹15',
         },
         {
           id: 2,
-          stop: 'College Canteen',
-          mode: 'Cold Coffee',
-          icon: Coffee,
+          category: 'Canteen',
+          mode: 'Cold Coffee & Snacks',
+          stop: 'College Gate',
           paidBy: 'Rahul',
           amount: 60,
           split: '3 × ₹20',
@@ -563,230 +556,141 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* Hero Right Column: Interactive Transit Map & Settlement Pipeline */}
+          {/* Hero Right Column: Human-Designed Clean Settlement Pipeline */}
           <div className="lg:col-span-6 w-full">
-            <div className="bg-white rounded-3xl border-2 border-warm-200/90 shadow-elevated p-5 sm:p-6 lg:p-7 space-y-5">
-              {/* Header Bar with Interactive Route Switcher */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-warm-200/80">
-                <div className="flex items-center gap-2.5">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600" />
+            <div className="bg-white rounded-3xl border border-warm-200 shadow-card p-6 sm:p-7 space-y-6">
+              {/* Header Bar: Clean typography, zero glowing dots */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-warm-200">
+                <div>
+                  <span className="text-[11px] font-mono font-bold tracking-widest text-charcoal-400 uppercase block">
+                    Settlement Pipeline
                   </span>
-                  <div>
-                    <span className="text-[10px] font-mono font-bold tracking-widest text-brand-700 uppercase block">
-                      Live Transit Pipeline
-                    </span>
-                    <h3 className="text-sm sm:text-base font-extrabold text-charcoal-900 leading-tight">
-                      {pipelineRoutes[pipelineRoute].name}
-                    </h3>
-                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-charcoal-900 leading-snug mt-0.5">
+                    {pipelineRoutes[pipelineRoute].name}
+                  </h3>
                 </div>
 
-                {/* Route Selector Buttons */}
-                <div className="flex items-center gap-1 p-1 bg-warm-100 rounded-xl border border-warm-200/80 self-start sm:self-auto">
-                  <button
-                    onClick={() => {
-                      setPipelineRoute('metro');
-                      setSelectedStation(0);
-                    }}
-                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                      pipelineRoute === 'metro'
-                        ? 'bg-white text-brand-900 shadow-xs'
-                        : 'text-charcoal-600 hover:text-charcoal-900'
-                    }`}
-                  >
-                    Metro Hop
-                  </button>
-                  <button
-                    onClick={() => {
-                      setPipelineRoute('cab');
-                      setSelectedStation(0);
-                    }}
-                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                      pipelineRoute === 'cab'
-                        ? 'bg-white text-brand-900 shadow-xs'
-                        : 'text-charcoal-600 hover:text-charcoal-900'
-                    }`}
-                  >
-                    Late Cab
-                  </button>
-                  <button
-                    onClick={() => {
-                      setPipelineRoute('bus');
-                      setSelectedStation(0);
-                    }}
-                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                      pipelineRoute === 'bus'
-                        ? 'bg-white text-brand-900 shadow-xs'
-                        : 'text-charcoal-600 hover:text-charcoal-900'
-                    }`}
-                  >
-                    City Bus
-                  </button>
+                {/* Route Selector Tabs: Solid, quiet pills */}
+                <div className="flex items-center gap-1 p-1 bg-warm-100 rounded-xl border border-warm-200 self-start sm:self-auto">
+                  {(['metro', 'cab', 'bus'] as const).map(routeKey => (
+                    <button
+                      key={routeKey}
+                      onClick={() => setPipelineRoute(routeKey)}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        pipelineRoute === routeKey
+                          ? 'bg-white text-charcoal-900 shadow-xs'
+                          : 'text-charcoal-600 hover:text-charcoal-900'
+                      }`}
+                    >
+                      {routeKey === 'metro' ? 'Metro Hop' : routeKey === 'cab' ? 'Late Cab' : 'City Bus'}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Stage 1: Commute Intake (3 Inbound Streams) */}
-              <div className="space-y-2">
+              {/* Stage 1: Inbound Commute Legs (Clean cards, no sloppy icons) */}
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between text-xs text-charcoal-500 font-medium">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-brand-600" />
-                    Stage 1: Inbound Commute Legs
-                  </span>
-                  <span className="font-mono text-charcoal-700">
+                  <span className="text-charcoal-700 font-bold">1. Inbound Commute Legs</span>
+                  <span className="font-mono text-charcoal-500">
                     Total: <strong className="text-charcoal-900">₹{pipelineRoutes[pipelineRoute].totalSpend}</strong>
                   </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
-                  {pipelineRoutes[pipelineRoute].legs.map((leg, idx) => {
-                    const Icon = leg.icon;
-                    const isSelected = selectedStation === idx;
-                    return (
-                      <div
-                        key={leg.id}
-                        onClick={() => setSelectedStation(idx)}
-                        className={`p-2.5 sm:p-3 rounded-2xl border transition-all duration-200 cursor-pointer text-center flex flex-col justify-between ${
-                          isSelected
-                            ? 'bg-warm-100/90 border-brand-500/80 shadow-xs ring-1 ring-brand-500/30'
-                            : 'bg-warm-50/70 border-warm-200/90 hover:bg-warm-100/60'
-                        }`}
-                      >
-                        <div className="flex flex-col items-center">
-                          <div className="w-8 h-8 rounded-xl bg-white border border-warm-300 text-brand-800 flex items-center justify-center shadow-2xs mb-1.5">
-                            <Icon className="w-4 h-4" />
-                          </div>
-                          <span className="text-xs font-bold text-charcoal-900 leading-tight">
-                            {leg.mode}
-                          </span>
-                          <span className="text-[10px] text-charcoal-500 font-mono mt-0.5">
-                            {leg.split}
-                          </span>
-                        </div>
-                        <div className="pt-1.5 border-t border-warm-200/70 mt-2 flex items-center justify-between text-[10px] font-mono">
-                          <span className="text-charcoal-400 font-medium">Paid</span>
-                          <span className="font-bold text-charcoal-800">₹{leg.amount}</span>
-                        </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {pipelineRoutes[pipelineRoute].legs.map(leg => (
+                    <div
+                      key={leg.id}
+                      className="p-3.5 rounded-xl bg-warm-50/80 border border-warm-200/90 flex flex-col justify-between space-y-3"
+                    >
+                      <div>
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-charcoal-400 block mb-1">
+                          {leg.category}
+                        </span>
+                        <h4 className="text-xs font-bold text-charcoal-900 leading-snug">
+                          {leg.mode}
+                        </h4>
+                        <p className="text-[11px] text-charcoal-500 font-mono mt-0.5">
+                          {leg.split}
+                        </p>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
 
-              {/* Stage 2: Converging SVG Pipeline Tracks */}
-              <div className="relative h-9 w-full overflow-hidden">
-                <svg className="w-full h-full" viewBox="0 0 300 36" fill="none" preserveAspectRatio="none">
-                  {/* Left Stream Path */}
-                  <path
-                    d="M 50 0 C 50 18, 150 14, 150 36"
-                    stroke="#059669"
-                    strokeWidth="2.5"
-                    strokeDasharray={isProcessing ? "4 4" : "none"}
-                    className={isProcessing ? "animate-pulse" : "opacity-75"}
-                  />
-                  {/* Center Stream Path */}
-                  <path
-                    d="M 150 0 L 150 36"
-                    stroke="#0f4c3a"
-                    strokeWidth="2.5"
-                    strokeDasharray={isProcessing ? "4 4" : "none"}
-                    className={isProcessing ? "animate-pulse" : "opacity-90"}
-                  />
-                  {/* Right Stream Path */}
-                  <path
-                    d="M 250 0 C 250 18, 150 14, 150 36"
-                    stroke="#059669"
-                    strokeWidth="2.5"
-                    strokeDasharray={isProcessing ? "4 4" : "none"}
-                    className={isProcessing ? "animate-pulse" : "opacity-75"}
-                  />
-                  {/* Convergence Node Indicator */}
-                  <circle cx="150" cy="35" r="3" fill="#0f4c3a" />
-                </svg>
-              </div>
-
-              {/* Stage 3: Greedy Graph Engine Core */}
-              <div className="bg-brand-50/80 rounded-2xl border-2 border-brand-200/90 p-3 sm:p-3.5 flex items-center justify-between gap-3 shadow-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-brand-700 text-white flex items-center justify-center shrink-0 shadow-xs">
-                    <Zap className={`w-4 h-4 ${isProcessing ? 'animate-bounce' : ''}`} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-charcoal-900">
-                        {isProcessing ? 'Simplifying Graph Matrix...' : 'Greedy Graph Engine'}
-                      </span>
-                      <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-300">
-                        O(V+E)
-                      </span>
+                      <div className="pt-2 border-t border-warm-200/80 flex items-center justify-between text-xs">
+                        <span className="text-[11px] text-charcoal-400">Paid by {leg.paidBy}</span>
+                        <span className="font-mono font-bold text-charcoal-900">₹{leg.amount}</span>
+                      </div>
                     </div>
-                    <p className="text-[11px] text-charcoal-600 font-mono mt-0.5">
-                      Cancels 3 circular debts into 1 direct settlement
-                    </p>
+                  ))}
+                </div>
+              </div>
+
+              {/* Stage 2: Central Resolution Engine (Clean warm bar, NO sloppy icons, NO neon) */}
+              <div className="p-3.5 rounded-xl bg-warm-100/80 border border-warm-200 flex items-center justify-between gap-3 text-xs">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-charcoal-900">2. Greedy Graph Optimization</span>
+                    <span className="text-[10px] font-mono font-bold text-charcoal-600 bg-white border border-warm-200 px-1.5 py-0.5 rounded">
+                      O(V+E)
+                    </span>
                   </div>
+                  <p className="text-[11px] text-charcoal-500">
+                    Cancels overlapping loop transfers so no one owes circular debts
+                  </p>
                 </div>
 
-                <button
-                  onClick={handleSimulatePipeline}
-                  disabled={isProcessing}
-                  className="px-2.5 py-1.5 bg-white hover:bg-brand-50 text-brand-800 text-[11px] font-bold rounded-lg border border-brand-300 shadow-2xs transition-all shrink-0 cursor-pointer active:scale-95"
-                >
-                  {isProcessing ? 'Resolving...' : 'Simulate Run'}
-                </button>
+                <span className="text-[11px] font-mono font-bold text-charcoal-700 bg-white border border-warm-200 px-2.5 py-1 rounded-lg shrink-0">
+                  {pipelineRoutes[pipelineRoute].collapse.savedRatio}
+                </span>
               </div>
 
-              {/* Output Pipe Downward */}
-              <div className="flex justify-center -my-2 relative z-10">
-                <div className="w-0.5 h-4 bg-gradient-to-b from-brand-700 to-emerald-500 relative">
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-emerald-600 rounded-full" />
-                </div>
-              </div>
-
-              {/* Stage 4: Pipeline Output: 1-Tap Net Settlement */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/60 border-2 border-emerald-300/90 shadow-xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2 py-0.5 rounded-md">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    Pipeline Output: 1 Direct Transfer
+              {/* Stage 3: Output Card (Clean warm white with subtle borders, NO neon green) */}
+              <div className="p-5 rounded-2xl bg-white border border-warm-300 shadow-subtle space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-warm-100 text-xs">
+                  <span className="font-mono text-[11px] font-bold text-charcoal-600 uppercase tracking-wider">
+                    3. Output: 1 Direct UPI Transfer
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-800 font-bold bg-white px-2 py-0.5 rounded border border-emerald-200">
-                    {pipelineRoutes[pipelineRoute].collapse.savedRatio}
+                  <span className="text-[11px] font-medium text-charcoal-500">
+                    Exact paise · ₹0.00 drift
                   </span>
                 </div>
 
-                <div className="p-3.5 bg-white rounded-xl border border-emerald-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-                  <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-extrabold text-charcoal-900">
+                      <span className="text-base font-extrabold text-charcoal-900">
                         {pipelineRoutes[pipelineRoute].collapse.debtor}
                       </span>
-                      <ArrowRight className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-sm font-extrabold text-brand-800">
+                      <ArrowRight className="w-4 h-4 text-charcoal-400 shrink-0" />
+                      <span className="text-base font-extrabold text-charcoal-900">
                         {pipelineRoutes[pipelineRoute].collapse.creditor}
                       </span>
                     </div>
-                    <p className="text-[11px] text-charcoal-500 font-mono mt-0.5">
+                    <p className="text-xs text-charcoal-500">
                       {pipelineRoutes[pipelineRoute].collapse.detail}
                     </p>
                   </div>
 
                   <div className="text-left sm:text-right shrink-0">
-                    <span className="text-xl sm:text-2xl font-mono font-black text-brand-900 block leading-tight">
+                    <span className="text-2xl font-mono font-black text-charcoal-900 block leading-tight">
                       ₹{pipelineRoutes[pipelineRoute].collapse.amount.toFixed(2)}
                     </span>
-                    <span className="text-[10px] text-emerald-700 font-mono font-medium">
-                      Exact paise (₹0.00 drift)
+                    <span className="text-[11px] text-charcoal-500 font-medium">
+                      Single Direct Payment
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-1 text-[11px] text-charcoal-600 font-medium">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    Deep-links to GPay, PhonePe, Paytm & BHIM
+                <div className="pt-3 border-t border-warm-100 flex items-center justify-between text-xs">
+                  <span className="text-charcoal-500 text-[11px]">
+                    Deep-links directly to GPay, PhonePe, Paytm & BHIM
                   </span>
-                  <span className="font-mono text-brand-800 font-bold">1-Tap Settle</span>
+                  <button
+                    onClick={onGetStarted}
+                    className="font-bold text-xs text-brand-700 hover:text-brand-800 flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <span>1-Tap Settle</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             </div>
