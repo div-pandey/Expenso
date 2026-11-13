@@ -424,74 +424,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* Hero Right Column: Pure Editorial Text & Manifesto (No cards, no demo widgets) */}
-          <div className="lg:col-span-6 space-y-7 lg:pl-6 xl:pl-10 text-left">
-            <div className="space-y-3">
-              <span className="text-xs font-mono font-black tracking-widest text-brand-700 uppercase">
-                The Campus Commute Reality
+          {/* Hero Right Column: Concise Commute Reality Summary (No cards, minimal text) */}
+          <div className="lg:col-span-6 space-y-6 lg:pl-6 xl:pl-10 text-left">
+            <div className="space-y-2">
+              <span className="text-xs font-mono font-bold tracking-widest text-brand-700 uppercase">
+                The Commute Problem
               </span>
-              <h2 className="text-2xl sm:text-3xl lg:text-[2.25rem] font-black text-charcoal-900 tracking-tight leading-tight">
-                “Why is splitting a ₹30 e-rickshaw ride more complicated than semester exams?”
+              <h2 className="text-2xl sm:text-3xl font-black text-charcoal-900 tracking-tight leading-snug">
+                “Why is splitting a ₹30 e-rickshaw harder than college exams?”
               </h2>
             </div>
 
-            <div className="space-y-4 text-sm sm:text-base text-charcoal-600 leading-relaxed">
-              <p>
-                Every morning across university campuses, three or four friends jump into an auto outside the metro station. One person scans the driver’s UPI QR code in a rush. The rest promise to “pay back later on WhatsApp.”
-              </p>
-              <p>
-                By Friday night, everyone owes each other random amounts across ten different rides, circular transfers pile up, and friendships get awkward over ₹15 that nobody wants to ask for.
-              </p>
-            </div>
+            <p className="text-sm sm:text-base text-charcoal-600 leading-relaxed">
+              Shared rides shouldn’t turn into awkward weekend math. Expenso settles college autos, metros, and cabs in seconds.
+            </p>
 
-            {/* Three Simple Truths (Pure Typography with Numbering) */}
-            <div className="pt-6 border-t border-warm-200/80 space-y-5">
-              <p className="text-xs font-black uppercase tracking-wider text-charcoal-800">
-                Built specifically for Indian college commutes:
-              </p>
-
-              <div className="space-y-4">
-                <div className="flex items-start gap-4">
-                  <span className="text-sm font-mono font-black text-brand-700 mt-0.5 shrink-0">
-                    01.
-                  </span>
-                  <div>
-                    <h4 className="text-sm font-bold text-charcoal-900">
-                      Paise-Locked Integer Precision
-                    </h4>
-                    <p className="text-xs sm:text-sm text-charcoal-500 leading-relaxed mt-0.5">
-                      Every odd rupee split is accounted for down to the exact paise. Zero floating-point drift, zero rounding loss.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <span className="text-sm font-mono font-black text-brand-700 mt-0.5 shrink-0">
-                    02.
-                  </span>
-                  <div>
-                    <h4 className="text-sm font-bold text-charcoal-900">
-                      Zero Circular Debt Elimination
-                    </h4>
-                    <p className="text-xs sm:text-sm text-charcoal-500 leading-relaxed mt-0.5">
-                      A greedy net minimizer cancels loops so multiple chaotic shared rides collapse into just 1 direct UPI transfer.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <span className="text-sm font-mono font-black text-brand-700 mt-0.5 shrink-0">
-                    03.
-                  </span>
-                  <div>
-                    <h4 className="text-sm font-bold text-charcoal-900">
-                      100% Free · Zero Ads · Zero Monetization
-                    </h4>
-                    <p className="text-xs sm:text-sm text-charcoal-500 leading-relaxed mt-0.5">
-                      Open, student-focused software with no subscription paywalls, no full-screen video countdowns, and no tracking.
-                    </p>
-                  </div>
-                </div>
+            <div className="pt-4 border-t border-warm-200/80 space-y-3.5">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-mono font-black text-brand-700 bg-brand-50 border border-brand-200/70 px-2 py-0.5 rounded">01</span>
+                <span className="text-sm font-bold text-charcoal-900">Paise-Locked Math <span className="text-xs font-normal text-charcoal-500">— Zero rounding drift</span></span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-mono font-black text-brand-700 bg-brand-50 border border-brand-200/70 px-2 py-0.5 rounded">02</span>
+                <span className="text-sm font-bold text-charcoal-900">Zero Circular Debt <span className="text-xs font-normal text-charcoal-500">— 1 direct transfer clears loops</span></span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-mono font-black text-brand-700 bg-brand-50 border border-brand-200/70 px-2 py-0.5 rounded">03</span>
+                <span className="text-sm font-bold text-charcoal-900">100% Free Forever <span className="text-xs font-normal text-charcoal-500">— No ads, no subscriptions</span></span>
               </div>
             </div>
           </div>
