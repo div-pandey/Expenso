@@ -6,6 +6,12 @@
  * 2. Cross-check the paid amount with the required repayment amount (e.g. ₹2,000)
  * 3. Extract and verify the 12-digit UPI UTR / Transaction Reference ID
  * 4. Reject fake screenshots, memes, random photos, failed transactions, or wrong amounts
+ *
+ * Production Architecture:
+ * - Direct AI calls are proxied through the secure Vercel Serverless Function (/api/verify-upi)
+ *   where GEMINI_API_KEY is stored exclusively on the server (never exposed to browser bundles).
+ * - Client-side image compression ensures screenshots are <= 1280px to prevent 413 Payload Too Large errors.
+ * - Free/offline mode falls back to Smart Vision & Receipt Heuristic Inspector.
  */
 
 export interface VerificationChecklist {
@@ -36,11 +42,8 @@ export interface VerificationResult {
   engineUsed: 'gemini-ai' | 'smart-vision-heuristic';
 }
 
-// Direct Vite environment reference - statically replaced by Vite at compile time
-const envGeminiKey: string = (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
-
 /**
- * Retrieves the Gemini API key from environment variable, define replacement, or localStorage.
+ * Retrieves a custom user-configured Gemini API key from localStorage.
  */
 export function getGeminiApiKey(): string {
   if (typeof localStorage !== 'undefined') {
@@ -50,29 +53,10 @@ export function getGeminiApiKey(): string {
     }
   }
 
-  // 1. Check live import.meta.env (allows test stubs)
+  // Check dynamic env for unit tests
   const dynamicEnv = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) as string | undefined;
   if (typeof dynamicEnv === 'string' && dynamicEnv.trim()) {
-    if (typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem('expenso_gemini_api_key', dynamicEnv.trim());
-      } catch {
-        // localStorage full or restricted
-      }
-    }
     return dynamicEnv.trim();
-  }
-
-  // 2. Fall back to compile-time inlined key for browser app runtime
-  if (import.meta.env?.MODE !== 'test' && typeof envGeminiKey === 'string' && envGeminiKey.trim()) {
-    if (typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem('expenso_gemini_api_key', envGeminiKey.trim());
-      } catch {
-        // localStorage full or restricted
-      }
-    }
-    return envGeminiKey.trim();
   }
 
   return '';
@@ -92,7 +76,7 @@ export function setGeminiApiKey(key: string): void {
 }
 
 /**
- * Main verification function called the moment a user uploads a payment screenshot.
+ * Main verification function called when a user uploads a payment screenshot.
  */
 export async function verifyPaymentProofWithGemini(params: {
   imageDataUrl: string;
@@ -113,10 +97,10 @@ export async function verifyPaymentProofWithGemini(params: {
   const expectedRupees = expectedAmountPaise / 100;
   const apiKey = params.apiKey || getGeminiApiKey();
 
-  // If Gemini API key is available, run multimodal Gemini Flash
+  // 1. If explicit API key is provided (or in test mode with key), run direct Gemini Vision
   if (apiKey) {
     try {
-      const geminiResult = await runGeminiVisionAnalysis({
+      return await runGeminiVisionAnalysis({
         apiKey,
         imageDataUrl,
         expectedRupees,
@@ -124,7 +108,6 @@ export async function verifyPaymentProofWithGemini(params: {
         recipientUpi,
         expectedUtr,
       });
-      return geminiResult;
     } catch (err) {
       console.error('Gemini API verification failed:', err);
       const msg = err instanceof Error ? err.message : 'AI verification failed';
@@ -149,7 +132,63 @@ export async function verifyPaymentProofWithGemini(params: {
     }
   }
 
-  // Fallback: Smart Vision & Receipt Heuristic Inspector
+  // 2. In browser production runtime, call secure serverless API proxy (/api/verify-upi)
+  const isTestEnv = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
+  if (!isTestEnv && typeof window !== 'undefined') {
+    try {
+      const response = await fetch('/api/verify-upi', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageDataUrl,
+          expectedAmountPaise,
+          recipientName,
+          recipientUpi,
+          expectedUtr,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const isValid = Boolean(data.isValid);
+        const amount = typeof data.amount === 'number' ? data.amount : undefined;
+        const utrNumber = data.utrNumber || undefined;
+        const payeeVpa = data.payeeVpa || undefined;
+
+        return {
+          isValid,
+          confidence: typeof data.confidence === 'number' ? data.confidence : (isValid ? 0.95 : 0.2),
+          detectedApp: 'UPI App',
+          detectedAmount: amount,
+          detectedUtr: utrNumber,
+          detectedRecipient: payeeVpa,
+          paymentStatus: isValid ? 'successful' : 'failed',
+          rejectionReason: isValid ? undefined : data.reason,
+          summary: data.reason || (isValid ? `Verified ₹${expectedRupees} payment` : 'Verification failed'),
+          issues: isValid ? [] : [data.reason || 'Verification rejected'],
+          checklist: {
+            isReceipt: isValid || Boolean(utrNumber),
+            receiptDetail: isValid ? 'Valid UPI payment confirmation' : 'Payment receipt',
+            isAmountMatch: isValid,
+            amountDetail: amount ? `₹${amount}` : `Expected ₹${expectedRupees}`,
+            isStatusSuccess: isValid,
+            statusDetail: isValid ? 'Payment completed successfully' : (data.reason || 'Unverified'),
+            isUtrFound: Boolean(utrNumber),
+            utrDetail: utrNumber ? `Ref ID: ${utrNumber}` : '12-digit UPI reference (UTR) not clearly visible',
+            isRecipientMatch: Boolean(payeeVpa),
+            recipientDetail: payeeVpa,
+          },
+          engineUsed: 'gemini-ai',
+        };
+      }
+    } catch {
+      // Serverless function not reachable (offline / sandbox fallback)
+    }
+  }
+
+  // 3. Fallback: Smart Vision & Receipt Heuristic Inspector
   return runSmartVisionInspection({
     imageDataUrl,
     expectedRupees,
@@ -239,12 +278,10 @@ Respond ONLY with a valid JSON object following this exact schema, with no markd
 }`;
 
   const models = [
-    'gemini-3.5-flash',
-    'gemini-3.6-flash',
-    'gemini-flash-latest',
-    'gemini-3.8-flash',
     'gemini-2.5-flash',
     'gemini-1.5-flash',
+    'gemini-flash-latest',
+    'gemini-2.0-flash',
   ];
   let lastError: unknown;
   const cleanKey = apiKey.trim();
@@ -446,8 +483,7 @@ async function runSmartVisionInspection(params: {
         return;
       }
 
-      // 2. Aspect Ratio Check: Mobile receipts are portrait (e.g. 9:16, 9:19) or square cards.
-      // Wide panoramic/landscape photos (width > height * 1.6) are almost never mobile payment receipts.
+      // 2. Aspect Ratio Check: Mobile receipts are portrait or square cards
       if (width > height * 1.65) {
         resolve({
           isValid: false,
@@ -511,7 +547,7 @@ async function runSmartVisionInspection(params: {
         let purplePhonePePixels = 0;
         let whiteLightPixels = 0;
 
-        for (let i = 0; i < data.length; i += 16) { // sample every 4th pixel
+        for (let i = 0; i < data.length; i += 16) {
           const r = data[i];
           const g = data[i + 1];
           const b = data[i + 2];
@@ -519,19 +555,15 @@ async function runSmartVisionInspection(params: {
           totalG += g;
           totalB += b;
 
-          // Green success cues (Google Pay / BHIM green #00ba56, #0f9d58)
           if (g > 110 && g > r * 1.35 && g > b * 1.35) {
             greenSuccessPixels++;
           }
-          // Paytm / GPay Blue (#00b0ff, #1a73e8)
           if (b > 130 && b > r * 1.3 && g > 70) {
             bluePaytmPixels++;
           }
-          // PhonePe Purple (#5f259f)
           if (r > 70 && b > 110 && g < r && g < b) {
             purplePhonePePixels++;
           }
-          // Light background/card pixels
           if (r > 210 && g > 210 && b > 210) {
             whiteLightPixels++;
           }
@@ -542,7 +574,6 @@ async function runSmartVisionInspection(params: {
         const avgG = totalG / sampledCount;
         const avgB = totalB / sampledCount;
 
-        // Check variance to catch solid black or solid white fake images
         let variance = 0;
         for (let i = 0; i < data.length; i += 64) {
           const diff = Math.abs(data[i] - avgR) + Math.abs(data[i + 1] - avgG) + Math.abs(data[i + 2] - avgB);
@@ -575,11 +606,9 @@ async function runSmartVisionInspection(params: {
           return;
         }
 
-        // Real mobile receipts have a structured card: significant light areas and distinct app theme badges
         const hasPaymentAppTheme = greenSuccessPixels > 15 || bluePaytmPixels > 25 || purplePhonePePixels > 20;
         const hasReceiptCardStructure = whiteLightPixels > sampledCount * 0.15;
 
-        // If the image lacks UPI app colors and themes, it's a random photo, ID badge, or non-receipt
         if (!hasPaymentAppTheme) {
           resolve({
             isValid: false,
@@ -606,7 +635,6 @@ async function runSmartVisionInspection(params: {
           return;
         }
 
-        // If the image lacks receipt card structure and has high variance
         if (!hasReceiptCardStructure && avgVariance > 160) {
           resolve({
             isValid: false,

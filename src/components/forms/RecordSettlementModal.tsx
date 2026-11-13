@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatCurrency, parseRupeesToPaise } from '../../utils/currency';
 import { buildSafeUpiUri, isValidUpiId } from '../../utils/upi';
+import { compressScreenshotForVerification } from '../../utils/image';
 import { launchUpiApp, resolveRecipientUpi, UPI_APP_PACKAGES } from '../../services/upiPaymentService';
 import {
   verifyPaymentProofWithGemini,
@@ -197,20 +198,22 @@ export const RecordSettlementModal: React.FC = () => {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { showToast('Screenshot must be under 5MB', 'error'); return; }
+    if (file.size > 15 * 1024 * 1024) { showToast('Screenshot must be under 15MB', 'error'); return; }
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
     if (!validTypes.includes(file.type)) { showToast('Upload a PNG, JPG or WebP image', 'error'); return; }
     setProofFile(file);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
-      setProofPreview(dataUrl);
-      await verifyProof(dataUrl);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsVerifying(true);
+      const compressedDataUrl = await compressScreenshotForVerification(file, 1280, 0.8);
+      setProofPreview(compressedDataUrl);
+      await verifyProof(compressedDataUrl);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to compress screenshot', 'error');
+      setIsVerifying(false);
+    }
   };
 
   const handleRemoveProof = () => {
@@ -247,7 +250,7 @@ export const RecordSettlementModal: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (submitting || isVerifying || !validate()) return;
 
     if (proofFile && (!verificationResult || !verificationResult.isValid)) {
       showToast(verificationResult?.rejectionReason || 'Please upload a verified payment screenshot', 'error');

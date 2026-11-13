@@ -3,12 +3,12 @@ import type { ParsedUPI } from '../types';
 
 /**
  * Validates UPI ID format (e.g., user@okhdfcbank, name@upi, 9876543210@paytm)
+ * Strict regex: minimum 2 chars username, '@', 2-64 chars bank provider handle
  */
 export function isValidUpiId(upiId: string): boolean {
   if (!upiId || typeof upiId !== 'string') return false;
   const trimmed = upiId.trim();
-  // Standard VPA: minimum 2 chars username, '@', minimum 2 chars bank handle
-  const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z0-9.\-_]{2,64}$/;
+  const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
   return upiRegex.test(trimmed);
 }
 
@@ -95,9 +95,10 @@ export function buildSafeUpiUri(params: {
     query.set('pn', params.pn.trim());
   }
 
-  // Optional: Amount in rupees with 2 decimal places
-  if (params.amPaise && params.amPaise > 0) {
-    const rupees = (params.amPaise / 100).toFixed(2);
+  // Optional: Clamped positive amount in rupees with exact 2 decimal places
+  if (typeof params.amPaise === 'number' && params.amPaise > 0) {
+    const clampedPaise = Math.max(0, Math.round(params.amPaise));
+    const rupees = (clampedPaise / 100).toFixed(2);
     query.set('am', rupees);
   }
 

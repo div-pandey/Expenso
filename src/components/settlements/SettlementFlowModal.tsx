@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { buildSafeUpiUri, isValidUpiId } from '../../utils/upi';
 import { formatCurrency } from '../../utils/currency';
+import { compressScreenshotForVerification } from '../../utils/image';
 import { launchUpiApp, resolveRecipientUpi, UPI_APP_PACKAGES } from '../../services/upiPaymentService';
 import {
   verifyPaymentProofWithGemini,
@@ -232,10 +233,10 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
     setTimeout(() => setCopiedUpi(false), 2000);
   };
 
-  const processProofFile = (file: File) => {
+  const processProofFile = async (file: File) => {
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('Screenshot must be under 5MB', 'error');
+    if (file.size > 15 * 1024 * 1024) {
+      showToast('Screenshot must be under 15MB', 'error');
       return;
     }
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
@@ -244,13 +245,15 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
       return;
     }
     setProofFile(file);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
-      setProofPreview(dataUrl);
-      await verifyProof(dataUrl);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsVerifying(true);
+      const compressedDataUrl = await compressScreenshotForVerification(file, 1280, 0.8);
+      setProofPreview(compressedDataUrl);
+      await verifyProof(compressedDataUrl);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to compress screenshot', 'error');
+      setIsVerifying(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -287,7 +290,7 @@ export const SettlementFlowModal: React.FC<SettlementFlowModalProps> = ({
   };
 
   const handleSubmitProof = async () => {
-    if (!settlement) return;
+    if (submitting || isVerifying || !settlement) return;
     if (!proofFile || !proofPreview) {
       showToast('Please upload your payment confirmation screenshot', 'error');
       return;

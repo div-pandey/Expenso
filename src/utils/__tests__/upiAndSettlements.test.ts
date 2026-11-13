@@ -11,6 +11,7 @@ describe('UPI Format Parsing & Safe URL Building', () => {
     expect(isValidUpiId('9876543210@paytm')).toBe(true);
     expect(isValidUpiId('invalid-upi')).toBe(false);
     expect(isValidUpiId('@okhdfcbank')).toBe(false);
+    expect(isValidUpiId('user@123')).toBe(false); // numbers only in handle rejected by strict regex
     expect(isValidUpiId('')).toBe(false);
   });
 
@@ -32,7 +33,7 @@ describe('UPI Format Parsing & Safe URL Building', () => {
     expect(result.error).toContain("doesn't appear to be a valid UPI payment QR");
   });
 
-  it('constructs safe URL-encoded UPI deep links', () => {
+  it('constructs safe URL-encoded UPI deep links with clamped amounts', () => {
     const uri = buildSafeUpiUri({
       pa: 'rahul.sharma@okhdfcbank',
       pn: 'Rahul Sharma',

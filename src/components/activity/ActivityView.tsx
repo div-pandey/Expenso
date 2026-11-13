@@ -126,11 +126,36 @@ export const ActivityView: React.FC = () => {
     setSelectedMember('all');
   };
 
+  /**
+   * Sanitizes a cell value to prevent CSV Formula Injection (DDE code execution)
+   * and enforces RFC-4180 quotation & escaping rules.
+   */
+  const sanitizeCsvCell = (value: unknown): string => {
+    if (value === null || value === undefined) return '""';
+    let str = String(value);
+    // Formula Injection Mitigation: prefix with single quote if first character is dangerous
+    if (/^[=+\-@\t\r]/.test(str)) {
+      str = `'${str}`;
+    }
+    // RFC-4180: escape double quotes by doubling them
+    const escaped = str.replace(/"/g, '""');
+    return `"${escaped}"`;
+  };
+
   const exportToCsv = () => {
     if (filteredEntries.length === 0) return;
-    const rows = [
-      ['Date', 'Type', 'Description', 'Category', 'Paid By / From', 'Participants / To', 'Amount (INR)', 'Notes'],
+    const header = [
+      'Date',
+      'Type',
+      'Description',
+      'Category',
+      'Paid By / From',
+      'Participants / To',
+      'Amount (INR)',
+      'Notes',
     ];
+
+    const rows: string[][] = [header.map(h => sanitizeCsvCell(h))];
 
     for (const item of filteredEntries) {
       if (item.type === 'expense') {
@@ -140,43 +165,43 @@ export const ActivityView: React.FC = () => {
           .map((pid) => members.find((m) => m.id === pid)?.name || pid)
           .join('; ');
         rows.push([
-          new Date(exp.date).toLocaleDateString(),
-          'Ride Expense',
-          `"${exp.description.replace(/"/g, '""')}"`,
-          exp.category,
-          `"${payer}"`,
-          `"${parts}"`,
-          (exp.amountPaise / 100).toFixed(2),
-          `"${(exp.notes || '').replace(/"/g, '""')}"`,
+          sanitizeCsvCell(new Date(exp.date).toLocaleDateString()),
+          sanitizeCsvCell('Ride Expense'),
+          sanitizeCsvCell(exp.description),
+          sanitizeCsvCell(exp.category),
+          sanitizeCsvCell(payer),
+          sanitizeCsvCell(parts),
+          sanitizeCsvCell((exp.amountPaise / 100).toFixed(2)),
+          sanitizeCsvCell(exp.notes || ''),
         ]);
       } else {
         const set = item.data;
         const fromM = members.find((m) => m.id === set.fromMemberId)?.name || 'Unknown';
         const toM = members.find((m) => m.id === set.toMemberId)?.name || 'Unknown';
         rows.push([
-          new Date(set.date).toLocaleDateString(),
-          'UPI Repayment',
-          `Repayment from ${fromM} to ${toM}`,
-          'settlement',
-          `"${fromM}"`,
-          `"${toM}"`,
-          (set.amountPaise / 100).toFixed(2),
-          `"${(set.notes || '').replace(/"/g, '""')}"`,
+          sanitizeCsvCell(new Date(set.date).toLocaleDateString()),
+          sanitizeCsvCell('UPI Repayment'),
+          sanitizeCsvCell(`Repayment from ${fromM} to ${toM}`),
+          sanitizeCsvCell('settlement'),
+          sanitizeCsvCell(fromM),
+          sanitizeCsvCell(toM),
+          sanitizeCsvCell((set.amountPaise / 100).toFixed(2)),
+          sanitizeCsvCell(set.notes || ''),
         ]);
       }
     }
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + rows.map((e) => e.join(',')).join('\n');
-    const encodedUri = encodeURI(csvContent);
+    // Prepend UTF-8 BOM (\uFEFF) so Excel and third-party tools parse UTF-8 characters (like ₹) correctly
+    const csvContent = '\uFEFF' + rows.map((e) => e.join(',')).join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `Expenso_${currentBlend?.name ? currentBlend.name.replace(/\s+/g, '_') : 'Commute'}_Report.csv`
-    );
+    link.href = url;
+    link.download = `Expenso_${currentBlend?.name ? currentBlend.name.replace(/\s+/g, '_') : 'Commute'}_Report.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
