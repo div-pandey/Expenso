@@ -5,7 +5,6 @@ import type { TransportCategory } from '../../types';
 import { useApp } from '../../context/AppContext';
 import {
   ArrowRight,
-  ArrowDown,
   ShieldCheck,
   CheckCircle2,
   Smartphone,
@@ -48,6 +47,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Interactive Transit Pipeline State
   const [pipelineRoute, setPipelineRoute] = useState<'metro' | 'cab' | 'bus'>('metro');
   const [selectedStation, setSelectedStation] = useState<number>(0);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+
+  const handleSimulatePipeline = () => {
+    setIsProcessing(true);
+    setTimeout(() => setIsProcessing(false), 800);
+  };
 
   const pipelineRoutes = {
     metro: {
@@ -622,97 +627,142 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
               </div>
 
-              {/* Transit Map Line (3 Connected Stations) */}
-              <div className="space-y-3">
+              {/* Stage 1: Commute Intake (3 Inbound Streams) */}
+              <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-charcoal-500 font-medium">
-                  <span>Interactive Route Stops</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-brand-600" />
+                    Stage 1: Inbound Commute Legs
+                  </span>
                   <span className="font-mono text-charcoal-700">
-                    Total Spend: <strong className="text-charcoal-900">₹{pipelineRoutes[pipelineRoute].totalSpend}</strong>
+                    Total: <strong className="text-charcoal-900">₹{pipelineRoutes[pipelineRoute].totalSpend}</strong>
                   </span>
                 </div>
 
-                <div className="relative pt-2 pb-1">
-                  {/* Connecting Transit Track Line */}
-                  <div className="absolute top-7 left-10 right-10 h-1 bg-warm-200 -z-0" />
-                  <div className="absolute top-7 left-10 right-10 h-1 bg-gradient-to-r from-brand-600 via-emerald-500 to-brand-700 -z-0 opacity-70" />
-
-                  {/* 3 Interactive Stations */}
-                  <div className="relative z-10 grid grid-cols-3 gap-2">
-                    {pipelineRoutes[pipelineRoute].legs.map((leg, idx) => {
-                      const Icon = leg.icon;
-                      const isSelected = selectedStation === idx;
-                      return (
-                        <button
-                          key={leg.id}
-                          onClick={() => setSelectedStation(idx)}
-                          className={`flex flex-col items-center text-center p-2.5 rounded-2xl transition-all duration-200 cursor-pointer ${
-                            isSelected
-                              ? 'bg-warm-100/90 ring-2 ring-brand-600/30 shadow-xs'
-                              : 'hover:bg-warm-50'
-                          }`}
-                        >
-                          {/* Station Circle Node */}
-                          <div
-                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 mb-2 transition-all ${
-                              isSelected
-                                ? 'bg-brand-700 text-white border-brand-800 shadow-sm scale-110'
-                                : 'bg-white text-brand-800 border-warm-300 shadow-xs'
-                            }`}
-                          >
+                <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+                  {pipelineRoutes[pipelineRoute].legs.map((leg, idx) => {
+                    const Icon = leg.icon;
+                    const isSelected = selectedStation === idx;
+                    return (
+                      <div
+                        key={leg.id}
+                        onClick={() => setSelectedStation(idx)}
+                        className={`p-2.5 sm:p-3 rounded-2xl border transition-all duration-200 cursor-pointer text-center flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-warm-100/90 border-brand-500/80 shadow-xs ring-1 ring-brand-500/30'
+                            : 'bg-warm-50/70 border-warm-200/90 hover:bg-warm-100/60'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center">
+                          <div className="w-8 h-8 rounded-xl bg-white border border-warm-300 text-brand-800 flex items-center justify-center shadow-2xs mb-1.5">
                             <Icon className="w-4 h-4" />
                           </div>
-
-                          {/* Station Name & Info */}
                           <span className="text-xs font-bold text-charcoal-900 leading-tight">
-                            {leg.stop}
-                          </span>
-                          <span className="text-[10px] text-charcoal-500 mt-0.5 font-medium">
                             {leg.mode}
                           </span>
-                          <span className="text-[11px] font-mono font-bold text-brand-800 mt-1">
-                            ₹{leg.amount}
+                          <span className="text-[10px] text-charcoal-500 font-mono mt-0.5">
+                            {leg.split}
                           </span>
-                          <span className="text-[9px] text-charcoal-400 font-mono">
-                            Paid by {leg.paidBy}
-                          </span>
-                        </button>
-                      );
-                    })}
+                        </div>
+                        <div className="pt-1.5 border-t border-warm-200/70 mt-2 flex items-center justify-between text-[10px] font-mono">
+                          <span className="text-charcoal-400 font-medium">Paid</span>
+                          <span className="font-bold text-charcoal-800">₹{leg.amount}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Stage 2: Converging SVG Pipeline Tracks */}
+              <div className="relative h-9 w-full overflow-hidden">
+                <svg className="w-full h-full" viewBox="0 0 300 36" fill="none" preserveAspectRatio="none">
+                  {/* Left Stream Path */}
+                  <path
+                    d="M 50 0 C 50 18, 150 14, 150 36"
+                    stroke="#059669"
+                    strokeWidth="2.5"
+                    strokeDasharray={isProcessing ? "4 4" : "none"}
+                    className={isProcessing ? "animate-pulse" : "opacity-75"}
+                  />
+                  {/* Center Stream Path */}
+                  <path
+                    d="M 150 0 L 150 36"
+                    stroke="#0f4c3a"
+                    strokeWidth="2.5"
+                    strokeDasharray={isProcessing ? "4 4" : "none"}
+                    className={isProcessing ? "animate-pulse" : "opacity-90"}
+                  />
+                  {/* Right Stream Path */}
+                  <path
+                    d="M 250 0 C 250 18, 150 14, 150 36"
+                    stroke="#059669"
+                    strokeWidth="2.5"
+                    strokeDasharray={isProcessing ? "4 4" : "none"}
+                    className={isProcessing ? "animate-pulse" : "opacity-75"}
+                  />
+                  {/* Convergence Node Indicator */}
+                  <circle cx="150" cy="35" r="3" fill="#0f4c3a" />
+                </svg>
+              </div>
+
+              {/* Stage 3: Greedy Graph Engine Core */}
+              <div className="bg-brand-50/80 rounded-2xl border-2 border-brand-200/90 p-3 sm:p-3.5 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-brand-700 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Zap className={`w-4 h-4 ${isProcessing ? 'animate-bounce' : ''}`} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-charcoal-900">
+                        {isProcessing ? 'Simplifying Graph Matrix...' : 'Greedy Graph Engine'}
+                      </span>
+                      <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-300">
+                        O(V+E)
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-charcoal-600 font-mono mt-0.5">
+                      Cancels 3 circular debts into 1 direct settlement
+                    </p>
                   </div>
                 </div>
+
+                <button
+                  onClick={handleSimulatePipeline}
+                  disabled={isProcessing}
+                  className="px-2.5 py-1.5 bg-white hover:bg-brand-50 text-brand-800 text-[11px] font-bold rounded-lg border border-brand-300 shadow-2xs transition-all shrink-0 cursor-pointer active:scale-95"
+                >
+                  {isProcessing ? 'Resolving...' : 'Simulate Run'}
+                </button>
               </div>
 
-              {/* Collapse Step Indicator */}
-              <div className="relative flex items-center justify-center py-0.5">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-warm-200" />
-                </div>
-                <div className="relative z-10 px-3.5 py-1 bg-white flex items-center gap-1.5 text-[11px] font-mono font-bold text-brand-700 bg-brand-50 border border-brand-200/80 rounded-full shadow-2xs">
-                  <ArrowDown className="w-3.5 h-3.5 text-brand-700" />
-                  <span>Greedy Graph: Collapses 3 legs into 1 payment</span>
+              {/* Output Pipe Downward */}
+              <div className="flex justify-center -my-2 relative z-10">
+                <div className="w-0.5 h-4 bg-gradient-to-b from-brand-700 to-emerald-500 relative">
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-emerald-600 rounded-full" />
                 </div>
               </div>
 
-              {/* Collapsed Net Settlement Output Card */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/50 border-2 border-emerald-300/90 shadow-xs space-y-3">
+              {/* Stage 4: Pipeline Output: 1-Tap Net Settlement */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/60 border-2 border-emerald-300/90 shadow-xs space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2 py-0.5 rounded-md">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    Final Net Settlement
+                    Pipeline Output: 1 Direct Transfer
                   </span>
                   <span className="text-[10px] font-mono text-emerald-800 font-bold bg-white px-2 py-0.5 rounded border border-emerald-200">
                     {pipelineRoutes[pipelineRoute].collapse.savedRatio}
                   </span>
                 </div>
 
-                <div className="p-3 bg-white rounded-xl border border-emerald-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="p-3.5 bg-white rounded-xl border border-emerald-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-charcoal-900">
+                      <span className="text-sm font-extrabold text-charcoal-900">
                         {pipelineRoutes[pipelineRoute].collapse.debtor}
                       </span>
                       <ArrowRight className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-sm font-bold text-brand-800">
+                      <span className="text-sm font-extrabold text-brand-800">
                         {pipelineRoutes[pipelineRoute].collapse.creditor}
                       </span>
                     </div>
@@ -722,7 +772,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </div>
 
                   <div className="text-left sm:text-right shrink-0">
-                    <span className="text-lg sm:text-xl font-mono font-black text-brand-900 block leading-tight">
+                    <span className="text-xl sm:text-2xl font-mono font-black text-brand-900 block leading-tight">
                       ₹{pipelineRoutes[pipelineRoute].collapse.amount.toFixed(2)}
                     </span>
                     <span className="text-[10px] text-emerald-700 font-mono font-medium">
