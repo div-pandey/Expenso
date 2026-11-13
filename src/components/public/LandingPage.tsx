@@ -16,6 +16,8 @@ import {
   Keyboard,
   Lock,
   Check,
+  X,
+  XCircle,
   ChevronDown,
   Zap,
   ExternalLink,
@@ -424,33 +426,145 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* Hero Right Column: Concise Commute Reality Summary (No cards, minimal text) */}
-          <div className="lg:col-span-6 space-y-6 lg:pl-6 xl:pl-10 text-left">
-            <div className="space-y-2">
-              <span className="text-xs font-mono font-bold tracking-widest text-brand-700 uppercase">
-                The Commute Problem
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-charcoal-900 tracking-tight leading-snug">
-                “Why is splitting a ₹30 e-rickshaw harder than college exams?”
-              </h2>
-            </div>
-
-            <p className="text-sm sm:text-base text-charcoal-600 leading-relaxed">
-              Shared rides shouldn’t turn into awkward weekend math. Expenso settles college autos, metros, and cabs in seconds.
-            </p>
-
-            <div className="pt-4 border-t border-warm-200/80 space-y-3.5">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-mono font-black text-brand-700 bg-brand-50 border border-brand-200/70 px-2 py-0.5 rounded">01</span>
-                <span className="text-sm font-bold text-charcoal-900">Paise-Locked Math <span className="text-xs font-normal text-charcoal-500">— Zero rounding drift</span></span>
+          {/* Hero Right Column: Before vs After Commute Visual Graphic */}
+          <div className="lg:col-span-6 w-full">
+            <div className="bg-white rounded-3xl border-2 border-warm-200/90 shadow-elevated p-5 sm:p-6 lg:p-7 space-y-5">
+              {/* Header Bar */}
+              <div className="flex items-center justify-between pb-4 border-b border-warm-200/80">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  </div>
+                  <span className="text-xs font-mono font-bold tracking-wider text-charcoal-700 uppercase">
+                    Campus Commute Settlement
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono font-bold text-brand-700 bg-brand-50 border border-brand-200/70 px-2.5 py-0.5 rounded-full">
+                  Before vs After
+                </span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-mono font-black text-brand-700 bg-brand-50 border border-brand-200/70 px-2 py-0.5 rounded">02</span>
-                <span className="text-sm font-bold text-charcoal-900">Zero Circular Debt <span className="text-xs font-normal text-charcoal-500">— 1 direct transfer clears loops</span></span>
+
+              {/* Side-by-Side Comparison Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* 1. Left: WhatsApp IOU Chaos */}
+                <div className="bg-warm-50/70 rounded-2xl border border-warm-200 p-4 flex flex-col justify-between space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold uppercase tracking-wider text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
+                        <XCircle className="w-3 h-3 text-rose-600" />
+                        Without Expenso
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-charcoal-900">
+                        WhatsApp IOU Chaos
+                      </h3>
+                      <p className="text-[11px] text-charcoal-500 mt-0.5">
+                        Shared auto, metro, & chai
+                      </p>
+                    </div>
+
+                    {/* Mini Visual Diagram of Confused Debts */}
+                    <div className="p-3 bg-white rounded-xl border border-warm-200/90 space-y-2">
+                      <div className="flex items-center justify-between text-[11px] font-mono font-semibold text-charcoal-500 pb-1 border-b border-warm-100">
+                        <span>4 Friends · 3 Rides</span>
+                        <span className="text-rose-600 font-bold">6 Transfers</span>
+                      </div>
+                      <div className="space-y-1 text-[11px] font-mono text-charcoal-600">
+                        <div className="flex justify-between items-center">
+                          <span>Rahul owes Aman</span>
+                          <span className="font-semibold text-charcoal-800">₹40</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Aman owes Priya</span>
+                          <span className="font-semibold text-charcoal-800">₹40</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Priya owes Rahul</span>
+                          <span className="font-semibold text-charcoal-800">₹40</span>
+                        </div>
+                      </div>
+                      <div className="pt-1.5 border-t border-warm-100 flex items-center justify-between text-[10px] font-mono text-rose-600 font-bold">
+                        <span>Circular Debt Loop</span>
+                        <span>Who pays whom?</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Downsides List */}
+                  <ul className="space-y-2 text-xs text-charcoal-600 pt-1">
+                    <li className="flex items-start gap-2">
+                      <X className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                      <span>Awkward WhatsApp reminders</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <X className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                      <span>Floating-point rounding drift</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* 2. Right: Expenso 1-Tap Resolution */}
+                <div className="bg-emerald-50/40 rounded-2xl border-2 border-emerald-300/90 p-4 flex flex-col justify-between space-y-4 shadow-xs">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/80 border border-emerald-300 px-2 py-0.5 rounded-md">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        With Expenso
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-charcoal-900">
+                        1-Tap Resolution
+                      </h3>
+                      <p className="text-[11px] text-charcoal-500 mt-0.5">
+                        Greedy graph optimization
+                      </p>
+                    </div>
+
+                    {/* Mini Visual Diagram of Resolved Settlement */}
+                    <div className="p-3 bg-white rounded-xl border border-emerald-200 space-y-2 shadow-xs">
+                      <div className="flex items-center justify-between text-[11px] font-mono font-semibold text-charcoal-500 pb-1 border-b border-emerald-100">
+                        <span>Circular Loops Cancelled</span>
+                        <span className="text-emerald-700 font-bold">1 Direct UPI</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-emerald-50/70 border border-emerald-200/80 flex items-center justify-between">
+                        <div>
+                          <p className="text-[11px] font-bold text-charcoal-900">Aman pays Divyansh</p>
+                          <p className="text-[9px] text-emerald-700 font-mono">Single direct payment</p>
+                        </div>
+                        <span className="text-sm font-mono font-black text-brand-900">₹60.00</span>
+                      </div>
+                      <div className="pt-1.5 border-t border-emerald-100 flex items-center justify-between text-[10px] font-mono text-emerald-700 font-bold">
+                        <span>Paise-Locked Accuracy</span>
+                        <span>₹0.00 Discrepancy</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Benefits List */}
+                  <ul className="space-y-2 text-xs text-charcoal-700 font-medium pt-1">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>Zero circular debt confusion</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>1-tap UPI deep link ready</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-mono font-black text-brand-700 bg-brand-50 border border-brand-200/70 px-2 py-0.5 rounded">03</span>
-                <span className="text-sm font-bold text-charcoal-900">100% Free Forever <span className="text-xs font-normal text-charcoal-500">— No ads, no subscriptions</span></span>
+
+              {/* Bottom Quick Metric Bar */}
+              <div className="pt-3 border-t border-warm-200/80 flex flex-wrap items-center justify-between gap-2 text-xs text-charcoal-500">
+                <span className="text-[11px] text-charcoal-600">
+                  <strong className="text-charcoal-900 font-bold">67% fewer transfers</strong> across everyday campus commutes
+                </span>
+                <span className="font-mono text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  100% Free · No Ads
+                </span>
               </div>
             </div>
           </div>
