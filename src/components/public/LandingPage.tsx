@@ -5,6 +5,7 @@ import type { TransportCategory } from '../../types';
 import { useApp } from '../../context/AppContext';
 import {
   ArrowRight,
+  ArrowDown,
   ShieldCheck,
   CheckCircle2,
   Smartphone,
@@ -16,8 +17,6 @@ import {
   Keyboard,
   Lock,
   Check,
-  X,
-  XCircle,
   ChevronDown,
   Zap,
   ExternalLink,
@@ -45,6 +44,139 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [activeScenario, setActiveScenario] = useState<'metro_hop' | 'cab_pool' | 'chai_bus'>('metro_hop');
   const [activeGalleryTab, setActiveGalleryTab] = useState<number>(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // Interactive Transit Pipeline State
+  const [pipelineRoute, setPipelineRoute] = useState<'metro' | 'cab' | 'bus'>('metro');
+  const [selectedStation, setSelectedStation] = useState<number>(0);
+
+  const pipelineRoutes = {
+    metro: {
+      name: 'North Campus Metro Hop',
+      tag: 'Morning Rush',
+      totalSpend: 225,
+      legs: [
+        {
+          id: 0,
+          stop: 'Metro Station',
+          mode: 'Yellow Line',
+          icon: Train,
+          paidBy: 'Divyansh',
+          amount: 120,
+          split: '3 × ₹40',
+        },
+        {
+          id: 1,
+          stop: 'Faculty Gate 3',
+          mode: 'E-Rickshaw',
+          icon: Zap,
+          paidBy: 'Rahul',
+          amount: 60,
+          split: '3 × ₹20',
+        },
+        {
+          id: 2,
+          stop: 'Campus Tapri',
+          mode: 'Cutting Chai',
+          icon: Coffee,
+          paidBy: 'Aman',
+          amount: 45,
+          split: '3 × ₹15',
+        },
+      ],
+      collapse: {
+        debtor: 'Aman',
+        creditor: 'Divyansh',
+        amount: 35.0,
+        rawCount: 3,
+        savedRatio: '67% fewer transfers',
+        detail: '1 direct UPI payment settles all 3 transit legs',
+      },
+    },
+    cab: {
+      name: 'Late Night Lab Cab Pool',
+      tag: '11:00 PM Surge',
+      totalSpend: 450,
+      legs: [
+        {
+          id: 0,
+          stop: 'Tech Block',
+          mode: 'Uber XL Cab',
+          icon: Navigation,
+          paidBy: 'Divyansh',
+          amount: 360,
+          split: '3 × ₹120',
+        },
+        {
+          id: 1,
+          stop: 'Flyover Toll',
+          mode: 'Fastag Toll',
+          icon: Zap,
+          paidBy: 'Rahul',
+          amount: 45,
+          split: '3 × ₹15',
+        },
+        {
+          id: 2,
+          stop: 'Hostel Gate',
+          mode: 'Midnight Maggi',
+          icon: Coffee,
+          paidBy: 'Rahul',
+          amount: 45,
+          split: '3 × ₹15',
+        },
+      ],
+      collapse: {
+        debtor: 'Aman',
+        creditor: 'Divyansh',
+        amount: 150.0,
+        rawCount: 4,
+        savedRatio: '75% fewer transfers',
+        detail: '1 direct UPI payment cancels cross-debts for cab & snacks',
+      },
+    },
+    bus: {
+      name: 'Inter-College Bus & Snacks',
+      tag: 'Fest Day',
+      totalSpend: 195,
+      legs: [
+        {
+          id: 0,
+          stop: 'Bus Terminal',
+          mode: 'City Route 505',
+          icon: Bus,
+          paidBy: 'Aman',
+          amount: 90,
+          split: '3 × ₹30',
+        },
+        {
+          id: 1,
+          stop: 'Interchange',
+          mode: 'Feeder Shuttle',
+          icon: Zap,
+          paidBy: 'Rahul',
+          amount: 45,
+          split: '3 × ₹15',
+        },
+        {
+          id: 2,
+          stop: 'College Canteen',
+          mode: 'Cold Coffee',
+          icon: Coffee,
+          paidBy: 'Rahul',
+          amount: 60,
+          split: '3 × ₹20',
+        },
+      ],
+      collapse: {
+        debtor: 'Divyansh',
+        creditor: 'Rahul',
+        amount: 25.0,
+        rawCount: 3,
+        savedRatio: '67% fewer transfers',
+        detail: '1 direct UPI payment resolves full bus route & refreshments',
+      },
+    },
+  };
 
   // Sticky Smart Header visibility state
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
@@ -426,145 +558,186 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* Hero Right Column: Before vs After Commute Visual Graphic */}
+          {/* Hero Right Column: Interactive Transit Map & Settlement Pipeline */}
           <div className="lg:col-span-6 w-full">
             <div className="bg-white rounded-3xl border-2 border-warm-200/90 shadow-elevated p-5 sm:p-6 lg:p-7 space-y-5">
-              {/* Header Bar */}
-              <div className="flex items-center justify-between pb-4 border-b border-warm-200/80">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+              {/* Header Bar with Interactive Route Switcher */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-warm-200/80">
+                <div className="flex items-center gap-2.5">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600" />
+                  </span>
+                  <div>
+                    <span className="text-[10px] font-mono font-bold tracking-widest text-brand-700 uppercase block">
+                      Live Transit Pipeline
+                    </span>
+                    <h3 className="text-sm sm:text-base font-extrabold text-charcoal-900 leading-tight">
+                      {pipelineRoutes[pipelineRoute].name}
+                    </h3>
                   </div>
-                  <span className="text-xs font-mono font-bold tracking-wider text-charcoal-700 uppercase">
-                    Campus Commute Settlement
+                </div>
+
+                {/* Route Selector Buttons */}
+                <div className="flex items-center gap-1 p-1 bg-warm-100 rounded-xl border border-warm-200/80 self-start sm:self-auto">
+                  <button
+                    onClick={() => {
+                      setPipelineRoute('metro');
+                      setSelectedStation(0);
+                    }}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      pipelineRoute === 'metro'
+                        ? 'bg-white text-brand-900 shadow-xs'
+                        : 'text-charcoal-600 hover:text-charcoal-900'
+                    }`}
+                  >
+                    Metro Hop
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPipelineRoute('cab');
+                      setSelectedStation(0);
+                    }}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      pipelineRoute === 'cab'
+                        ? 'bg-white text-brand-900 shadow-xs'
+                        : 'text-charcoal-600 hover:text-charcoal-900'
+                    }`}
+                  >
+                    Late Cab
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPipelineRoute('bus');
+                      setSelectedStation(0);
+                    }}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      pipelineRoute === 'bus'
+                        ? 'bg-white text-brand-900 shadow-xs'
+                        : 'text-charcoal-600 hover:text-charcoal-900'
+                    }`}
+                  >
+                    City Bus
+                  </button>
+                </div>
+              </div>
+
+              {/* Transit Map Line (3 Connected Stations) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs text-charcoal-500 font-medium">
+                  <span>Interactive Route Stops</span>
+                  <span className="font-mono text-charcoal-700">
+                    Total Spend: <strong className="text-charcoal-900">₹{pipelineRoutes[pipelineRoute].totalSpend}</strong>
                   </span>
                 </div>
-                <span className="text-[11px] font-mono font-bold text-brand-700 bg-brand-50 border border-brand-200/70 px-2.5 py-0.5 rounded-full">
-                  Before vs After
-                </span>
-              </div>
 
-              {/* Side-by-Side Comparison Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* 1. Left: WhatsApp IOU Chaos */}
-                <div className="bg-warm-50/70 rounded-2xl border border-warm-200 p-4 flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold uppercase tracking-wider text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
-                        <XCircle className="w-3 h-3 text-rose-600" />
-                        Without Expenso
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-charcoal-900">
-                        WhatsApp IOU Chaos
-                      </h3>
-                      <p className="text-[11px] text-charcoal-500 mt-0.5">
-                        Shared auto, metro, & chai
-                      </p>
-                    </div>
+                <div className="relative pt-2 pb-1">
+                  {/* Connecting Transit Track Line */}
+                  <div className="absolute top-7 left-10 right-10 h-1 bg-warm-200 -z-0" />
+                  <div className="absolute top-7 left-10 right-10 h-1 bg-gradient-to-r from-brand-600 via-emerald-500 to-brand-700 -z-0 opacity-70" />
 
-                    {/* Mini Visual Diagram of Confused Debts */}
-                    <div className="p-3 bg-white rounded-xl border border-warm-200/90 space-y-2">
-                      <div className="flex items-center justify-between text-[11px] font-mono font-semibold text-charcoal-500 pb-1 border-b border-warm-100">
-                        <span>4 Friends · 3 Rides</span>
-                        <span className="text-rose-600 font-bold">6 Transfers</span>
-                      </div>
-                      <div className="space-y-1 text-[11px] font-mono text-charcoal-600">
-                        <div className="flex justify-between items-center">
-                          <span>Rahul owes Aman</span>
-                          <span className="font-semibold text-charcoal-800">₹40</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span>Aman owes Priya</span>
-                          <span className="font-semibold text-charcoal-800">₹40</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span>Priya owes Rahul</span>
-                          <span className="font-semibold text-charcoal-800">₹40</span>
-                        </div>
-                      </div>
-                      <div className="pt-1.5 border-t border-warm-100 flex items-center justify-between text-[10px] font-mono text-rose-600 font-bold">
-                        <span>Circular Debt Loop</span>
-                        <span>Who pays whom?</span>
-                      </div>
-                    </div>
+                  {/* 3 Interactive Stations */}
+                  <div className="relative z-10 grid grid-cols-3 gap-2">
+                    {pipelineRoutes[pipelineRoute].legs.map((leg, idx) => {
+                      const Icon = leg.icon;
+                      const isSelected = selectedStation === idx;
+                      return (
+                        <button
+                          key={leg.id}
+                          onClick={() => setSelectedStation(idx)}
+                          className={`flex flex-col items-center text-center p-2.5 rounded-2xl transition-all duration-200 cursor-pointer ${
+                            isSelected
+                              ? 'bg-warm-100/90 ring-2 ring-brand-600/30 shadow-xs'
+                              : 'hover:bg-warm-50'
+                          }`}
+                        >
+                          {/* Station Circle Node */}
+                          <div
+                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 mb-2 transition-all ${
+                              isSelected
+                                ? 'bg-brand-700 text-white border-brand-800 shadow-sm scale-110'
+                                : 'bg-white text-brand-800 border-warm-300 shadow-xs'
+                            }`}
+                          >
+                            <Icon className="w-4 h-4" />
+                          </div>
+
+                          {/* Station Name & Info */}
+                          <span className="text-xs font-bold text-charcoal-900 leading-tight">
+                            {leg.stop}
+                          </span>
+                          <span className="text-[10px] text-charcoal-500 mt-0.5 font-medium">
+                            {leg.mode}
+                          </span>
+                          <span className="text-[11px] font-mono font-bold text-brand-800 mt-1">
+                            ₹{leg.amount}
+                          </span>
+                          <span className="text-[9px] text-charcoal-400 font-mono">
+                            Paid by {leg.paidBy}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
-
-                  {/* Downsides List */}
-                  <ul className="space-y-2 text-xs text-charcoal-600 pt-1">
-                    <li className="flex items-start gap-2">
-                      <X className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
-                      <span>Awkward WhatsApp reminders</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <X className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
-                      <span>Floating-point rounding drift</span>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* 2. Right: Expenso 1-Tap Resolution */}
-                <div className="bg-emerald-50/40 rounded-2xl border-2 border-emerald-300/90 p-4 flex flex-col justify-between space-y-4 shadow-xs">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/80 border border-emerald-300 px-2 py-0.5 rounded-md">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        With Expenso
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-charcoal-900">
-                        1-Tap Resolution
-                      </h3>
-                      <p className="text-[11px] text-charcoal-500 mt-0.5">
-                        Greedy graph optimization
-                      </p>
-                    </div>
-
-                    {/* Mini Visual Diagram of Resolved Settlement */}
-                    <div className="p-3 bg-white rounded-xl border border-emerald-200 space-y-2 shadow-xs">
-                      <div className="flex items-center justify-between text-[11px] font-mono font-semibold text-charcoal-500 pb-1 border-b border-emerald-100">
-                        <span>Circular Loops Cancelled</span>
-                        <span className="text-emerald-700 font-bold">1 Direct UPI</span>
-                      </div>
-                      <div className="p-2 rounded-lg bg-emerald-50/70 border border-emerald-200/80 flex items-center justify-between">
-                        <div>
-                          <p className="text-[11px] font-bold text-charcoal-900">Aman pays Divyansh</p>
-                          <p className="text-[9px] text-emerald-700 font-mono">Single direct payment</p>
-                        </div>
-                        <span className="text-sm font-mono font-black text-brand-900">₹60.00</span>
-                      </div>
-                      <div className="pt-1.5 border-t border-emerald-100 flex items-center justify-between text-[10px] font-mono text-emerald-700 font-bold">
-                        <span>Paise-Locked Accuracy</span>
-                        <span>₹0.00 Discrepancy</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Benefits List */}
-                  <ul className="space-y-2 text-xs text-charcoal-700 font-medium pt-1">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                      <span>Zero circular debt confusion</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                      <span>1-tap UPI deep link ready</span>
-                    </li>
-                  </ul>
                 </div>
               </div>
 
-              {/* Bottom Quick Metric Bar */}
-              <div className="pt-3 border-t border-warm-200/80 flex flex-wrap items-center justify-between gap-2 text-xs text-charcoal-500">
-                <span className="text-[11px] text-charcoal-600">
-                  <strong className="text-charcoal-900 font-bold">67% fewer transfers</strong> across everyday campus commutes
-                </span>
-                <span className="font-mono text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  100% Free · No Ads
-                </span>
+              {/* Collapse Step Indicator */}
+              <div className="relative flex items-center justify-center py-0.5">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-warm-200" />
+                </div>
+                <div className="relative z-10 px-3.5 py-1 bg-white flex items-center gap-1.5 text-[11px] font-mono font-bold text-brand-700 bg-brand-50 border border-brand-200/80 rounded-full shadow-2xs">
+                  <ArrowDown className="w-3.5 h-3.5 text-brand-700" />
+                  <span>Greedy Graph: Collapses 3 legs into 1 payment</span>
+                </div>
+              </div>
+
+              {/* Collapsed Net Settlement Output Card */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/50 border-2 border-emerald-300/90 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2 py-0.5 rounded-md">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    Final Net Settlement
+                  </span>
+                  <span className="text-[10px] font-mono text-emerald-800 font-bold bg-white px-2 py-0.5 rounded border border-emerald-200">
+                    {pipelineRoutes[pipelineRoute].collapse.savedRatio}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-emerald-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-charcoal-900">
+                        {pipelineRoutes[pipelineRoute].collapse.debtor}
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-sm font-bold text-brand-800">
+                        {pipelineRoutes[pipelineRoute].collapse.creditor}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-charcoal-500 font-mono mt-0.5">
+                      {pipelineRoutes[pipelineRoute].collapse.detail}
+                    </p>
+                  </div>
+
+                  <div className="text-left sm:text-right shrink-0">
+                    <span className="text-lg sm:text-xl font-mono font-black text-brand-900 block leading-tight">
+                      ₹{pipelineRoutes[pipelineRoute].collapse.amount.toFixed(2)}
+                    </span>
+                    <span className="text-[10px] text-emerald-700 font-mono font-medium">
+                      Exact paise (₹0.00 drift)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 text-[11px] text-charcoal-600 font-medium">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Deep-links to GPay, PhonePe, Paytm & BHIM
+                  </span>
+                  <span className="font-mono text-brand-800 font-bold">1-Tap Settle</span>
+                </div>
               </div>
             </div>
           </div>
